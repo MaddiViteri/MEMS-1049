@@ -1,0 +1,94 @@
+/*
+ * GccApplication1.c
+ *
+ * Created: 1/30/2024 9:08:58 PM
+ * Author : mev46
+ */ 
+
+#include <avr/io.h>
+
+//*GLOBAL VARIABLES*//
+void wait (volatile int);
+void change_led_state(char);
+
+//*GOBAL VARIABLES*//
+	//NONE
+
+int main(void)
+
+{
+	int numb_states = 22; // number of states in the lED [attern, ncluding the 2-second off state
+	char pattern[] = {'A', 'C', 'B', 'C', 'A', 'C', 'A', 'D', 'A', 'D', 'B', 'C', 'B', 'C', 'A', 'D', 'B', 'C', 'B', 'C', 'B', 'E'}; //on and off pattern
+		
+	DORD = 0B00000000; //all pins are input
+	DDRC = 0B00000011; // pins pc0 and pc1 are set as output for LEDs
+	PORTC = 0B00000011; //turn off the LEDs (assumes the are wired as activated)
+	
+	while (PIND & 0b00000100) //this logic causes the program to stay in the loop if pin PD2 is high (switch not pressed)
+	{
+		
+		//this loop does nothing
+	}
+
+	while(1)
+	{
+		
+		//repeatedly display the LED pattern
+		
+		for (int i = 0; i < numb_states; i++) //scroll through pattern sequence
+		{
+			change_led_state(pattern[i]); //pass current index to function to chane pattern state
+		}
+	}
+	
+	return(0);
+}
+
+void change_led_state(char new)
+//this function changes the LED states to a new state defined by the passed argument
+{
+	switch(new){
+		case 'A' :
+			PORTC = 0b00000000;
+			wait(200);
+			break;
+		case'B':
+			PORTC = 0b00000000;
+			wait(600);
+			break;
+		case'C':
+			PORTC = 0b00000011;
+			wait(200)
+			break;
+		case 'D':
+			PORTC = 0b00000011;
+			wait(600)
+			break;
+		default:
+			PORTC = 0b00000011;
+			wait(2000);
+			
+	}
+	while(!(PIND & 0b00000100)) 
+	{
+		wait(50)
+} // end function
+
+void wait (volatile int multiple)
+//creates delay equal to multiplier t
+//assumes a 16Hrz clock frequency - change counts for different clocks 
+	while(multiple > 0)
+	{
+		TCCR0A = 0x00; // clears WGM00 and WGM01 to ensure timer/counter is normal
+		{
+		
+		TCNT0 = 0; //preload vlalue for testing on count = 250
+		TCCR0B = 0b00000011; //start timer, norml mode, crystal clock, prescaler 64
+		
+		while (TCNT0 < 0xFA); //exits when count == 250
+		
+		TCCR0B = 0x00; //stop TIMER0
+		multiple--;
+	}
+	
+} //end wait
