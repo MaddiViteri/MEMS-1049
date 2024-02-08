@@ -2,7 +2,7 @@
  * GccApplication1.c
  *
  * Created: 1/30/2024 9:08:58 PM
- * Author : mev46
+ * Author: mev46
  */ 
 
 #include <avr/io.h>
