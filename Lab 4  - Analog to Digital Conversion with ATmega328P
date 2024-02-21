@@ -1,1 +1,15 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
+//** GLOBAL VARIABLES **/
+void changeLedState(char);
+void wait(volatile int);
+
+int debounce = 50; //50 ms to debounce
+
+//where PC0 = A/LED1, PC1 = B/LED2, PC2 = C/LED3, PC3 = D/LED4, PC4 = E/LED5, PC5 = F/LED6
+int states_long = 6; // number of states of the LED pattern including 2nd state
+char pattern_long[]={'A','B','C','D','E','F'};
+
+int states_short = 3;
+char pattern_short[]={'D','E','F'};
