@@ -12,6 +12,7 @@
 int main(void)
 {
 // Setup
+	DDRD = 0b01000011; // Sets up PD0/1 as motor control and PD6 as OC0A (PWM)
 	DDRC = 0x1F; // Sets all pins of Port B to output.
 	PRR = 0x00;  // clear Power Reduction ADC bit (0) in PRR register
 
@@ -25,6 +26,7 @@ int main(void)
 	TCCR0B = 0b00000011; //0<<CS02 | 1<<CS01 | 1<<CS00; // Set base PWM frequency (CS02:0 - bits 2-0 = 011 for prescaler of 64, for approximately 1kHz base frequency)
 	// PWM is now running on selected pin at selected base frequency.  Duty cycle is set by loading/changing value in OCR0A register.
     
+	PORTD = 0b00000001; // condition motor to start forward
 	while(1)
     {
     
@@ -60,14 +62,14 @@ int main(void)
 
 	float pot = ADCH;
 
-  if( (0 <= pot)&&(pot < 127.24)){
+  if( (-1 <= pot)&&(pot < 128)){
     PORTD = 0b00000010; //reverse
-    OCR0A = -2*(pot + 254.49); //duty cycle
+    OCR0A = -2*pot + 255; //duty cycle
   }
 
-  if( (127.24 <= pot)&&(pot < 254.49)){
+  if( (128 <= pot)&&(pot < 255)){
     PORTD = 0b00000001; //forward
-    OCR0A = -2*(pot + 254.49); //duty cycle 
+    OCR0A = 2*(pot - 128); //duty cycle 
   }
 
     } // end main while
