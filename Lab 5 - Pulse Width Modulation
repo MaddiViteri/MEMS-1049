@@ -1,0 +1,66 @@
+#include <avr/io.h>
+//** GLOBAL VARIABLES **
+
+
+int main(void)
+{
+// Setup
+	DDRC = 0x1F; // Sets all pins of Port B to output.
+	PRR = 0x00;  // clear Power Reduction ADC bit (0) in PRR register
+
+	ADCSRA = 0b10000111; //1<<ADEN | 1<<ADPS2 | 1<<ADPS1 | 1<<ADPS0;  // 0x87 // 0b10000111 // Set ADC Enable bit (7) in ADCSRA register, and set ADC prescaler to 128 (bits 2-0 of ADCSRA = ADPS2-ADPS0 = 111)
+	ADMUX = 0b01100101; //0<<REFS1 | 1<<REFS0 | 1<<ADLAR; //0x60; // 0b01100000  // select Analog Reference voltage to be AVcc (bits 7-6 of ADMUX = 01),
+						//left justification (bit 5 of ADMUX = ADLAR = 1);
+						//and select channel 0 (bits 3-0 of ADMUX = MUX3-MUX0 = 000)
+
+  OCR0A = 0x00;       // Load $00 into OCR0 to set initial duty cycle to 0 (motor off)
+	TCCR0A = 0b10000011; //1<<COM0A1 | 0<<COM0A0 | 1<<WGM01 | 1<<WGM00;      // Set non-inverting mode on OC0A pin (COMA1:0 = 10; Fast PWM (WGM1:0 bits = bits 1:0 = 11) (Note that we are not affecting OC0B because COMB0:1 bits stay at default = 00)
+	TCCR0B = 0b00000011; //0<<CS02 | 1<<CS01 | 1<<CS00; // Set base PWM frequency (CS02:0 - bits 2-0 = 011 for prescaler of 64, for approximately 1kHz base frequency)
+	// PWM is now running on selected pin at selected base frequency.  Duty cycle is set by loading/changing value in OCR0A register.
+    
+	while(1)
+    {
+    
+	// Read analog input
+	ADCSRA = ADCSRA | 0b01000000; //Alternate code: ADCSRA |= (1<<ADSC); // Start conversion
+	while ((ADCSRA & 0b00010000) == 0); // Alternate code: while ((ADCSRA & (1<<ADIF)) ==0); // wait for conversion to finish
+	
+	float voltage = (ADCH*5)/255;
+	
+	if((0 <= voltage) && (voltage < 1)){
+		//PC0 is on - fast reverse
+		PORTC = 0b00011110;
+		}
+	if((1 <= voltage) && (voltage < 2)){
+		//PC1 is on - slow reverse
+		PORTC = 0b00011101;
+		}
+	if((2 <= voltage) && (voltage < 3)){
+		//PC2 is on - neutral
+		PORTC = 0b00011011;
+		}
+	if((3 <= voltage) && (voltage < 4)){
+		//PC3 is on - slow forward
+		PORTC = 0b00010111;
+		}
+	if((4 <= voltage) && (voltage <= 5)){
+		//PC4 is on - fast forward
+		PORTC = 0b00001111;
+		}
+	else{
+		PORTC = 0b00011111;
+		}
+
+  if( (0 <= ADCH)&&(ADCH < 127.24)){
+    PORTD = 0b00000001; //reverse
+    OCR0A = -2(ADHC + 254.49) //duty cycle
+  }
+
+  if( (127.24 <= ADCH)&&(ADCH < 254.49)){
+    PORTD = 0b00000010; //forward
+    OCR0A = -2(ADHC + 254.49) //duty cycle 
+  }
+
+    } // end main while
+
+} // end main
