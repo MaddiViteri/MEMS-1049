@@ -1,3 +1,10 @@
+/*
+ * GccLibrary1.c
+ *
+ * Last Updated: 2/28/2024
+ * Author : mev46
+ */ 
+
 #include <avr/io.h>
 //** GLOBAL VARIABLES **
 
@@ -51,14 +58,16 @@ int main(void)
 		PORTC = 0b00011111;
 		}
 
-  if( (0 <= ADCH)&&(ADCH < 127.24)){
-    PORTD = 0b00000001; //reverse
-    OCR0A = -2(ADHC + 254.49) //duty cycle
+	float pot = ADCH;
+
+  if( (0 <= pot)&&(pot < 127.24)){
+    PORTD = 0b00000010; //reverse
+    OCR0A = -2*(pot + 254.49); //duty cycle
   }
 
-  if( (127.24 <= ADCH)&&(ADCH < 254.49)){
-    PORTD = 0b00000010; //forward
-    OCR0A = -2(ADHC + 254.49) //duty cycle 
+  if( (127.24 <= pot)&&(pot < 254.49)){
+    PORTD = 0b00000001; //forward
+    OCR0A = -2*(pot + 254.49); //duty cycle 
   }
 
     } // end main while
