@@ -13,7 +13,7 @@ int main(void)
 {
 // Setup
 	DDRD = 0b01000011; // Sets up PD0/1 as motor control and PD6 as OC0A (PWM)
-	DDRC = 0x1F; // Sets all pins of Port B to output.
+	DDRC = 0x1F; // Sets all pins of Port C to output.
 	PRR = 0x00;  // clear Power Reduction ADC bit (0) in PRR register
 
 	ADCSRA = 0b10000111; //1<<ADEN | 1<<ADPS2 | 1<<ADPS1 | 1<<ADPS0;  // 0x87 // 0b10000111 // Set ADC Enable bit (7) in ADCSRA register, and set ADC prescaler to 128 (bits 2-0 of ADCSRA = ADPS2-ADPS0 = 111)
