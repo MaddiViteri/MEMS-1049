@@ -18,22 +18,39 @@ void delay_T_msec_timer0(char choice);
 
 //** GLOBAL VARIABLES **
 int phase_step = 1; // We will use wave stepping, so the steps are numbered 1-4, then will repeat.  
+int lights = 0; // use this to poll for light conditions
 
 int main(void)
 {
    // Setup
+    //motor
 	DDRD = 0b11110000; // Sets pins 4, 5, 6, and 7 output, and 	pins 0, 1, 2 and 3 to input. Pins 4-7 will be used for 	stepper motor control
+	
+	//LEDS
+	DDRB = 0b00000011; //sets PB0/1 as outputs for LEDS
+	PORTB = 0b00000011; // clears PB0/1 to start LEDS off
+	
+	//Switch
+	DDRC = 0b00000000; //sets all pins to inputs
+	
+	
+	while (PINC & 0b00000001) //this logic causes the program to stay in the loop if pin PD2 is high (switch not pressed)
+	{
+		
+		//this loop does nothing
+	}
+	
    while(1)
    {
 	// Step forward two steps
 	step_CW(); //step_CW()
-	wait(250,2); // delay so that motor doesn't skip steps
+	wait(500,2); // delay so that motor doesn't skip steps
 	step_CW(); //step_CW()
 	wait(250,2); // delay so that motor doesn't skip steps
 
 	// Step backward one step
 	step_CCW(); // step_CCW()
-	wait(250,2); // delay so that motor doesn't skip steps
+	wait(750,2); // delay so that motor doesn't skip steps
   
    } // end main while
 
@@ -43,54 +60,80 @@ void step_CCW()
 {
 	// This function advances the motor counter-clockwise one step.  Follow the full-wave stepping table in Stepper Motor Control.ppt for MEMS 1049 course. phase1a = PORTD_7, phase1b = PORTD_6
 	// phase2a = PORTD_5, phase2b = PORTD_4
-
+	
+	
+	
 	switch (phase_step) {
 		case 1:
 		// step to 2
+		PORTB = 0b00000001; //Turns on PB1 for counter clockwise
 		PORTD = 0b00010000;
 		phase_step = 2;
+		PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 2:
 		// step to 3
+		PORTB = 0b00000001; //Turns on PB1 for counter clockwise
 		PORTD = 0b01000000;
 		phase_step = 3;
+		PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 3:
 		// step to 4;
+		PORTB = 0b00000001; //Turns on PB1 for counter clockwise
 		PORTD = 0b00100000;
 		phase_step = 4;
+		PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 4:
 		// step to 1;
+		PORTB = 0b00000001; //Turns on PB1 for counter clockwise
 		PORTD = 0b10000000;
 		phase_step = 1;
+		PORTB = 0b00000011; //Turns OFF PB0/1
 	break;  }
+	
+	//PORTB = 0b00000011; //Turns OFF PB0/1
+	
 }// end step_CCW
 
 void step_CW() {
 	// This function advances the motor clockwise one step.  Follow the full-wave stepping table in Stepper Motor Control.ppt for MEMS 1049 course. Our stepper motor phases are assigned to Port pins as follows: phase1a = PORTD_7, phase1b = PORTD_6, phase2a = PORTD_5, phase2b = PORTD_4
 
+	
+	
 	switch (phase_step) {
 		case 1:
 		// step to 4
+		PORTB = 0b00000010; //Turns on PB0 for clockwise
 		PORTD = 0b00100000;
 		phase_step = 4;
+		PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 2:
 		// step to 1
+		PORTB = 0b00000010; //Turns on PB0 for clockwise
 		PORTD = 0b10000000;
 		phase_step = 1;
+		PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 3:
 		// step to 2;
+		PORTB = 0b00000010; //Turns on PB0 for clockwise
 		PORTD = 0b00010000;
 		phase_step = 2;
+		PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 4:
 		// step to 3;
+		PORTB = 0b00000010; //Turns on PB0 for clockwise
 		PORTD = 0b01000000;
+		PORTB = 0b00000011; //Turns OFF PB0/1
 		phase_step = 3;
 	break;  }
+	
+	//PORTB = 0b00000011; //Turns OFF PB0/1
+	
 }// end step_CW
 
 void wait(volatile int multiple, volatile char time_choice) {
@@ -101,7 +144,10 @@ void wait(volatile int multiple, volatile char time_choice) {
 		Outputs: None
 	*/
 	
+	
+	
 	while (multiple > 0) {
+		//PORTB = 0b00000011; //Turns OFF PB0/1
 		delay_T_msec_timer0(time_choice); 
 		multiple--;
 	}
@@ -151,3 +197,16 @@ void delay_T_msec_timer0(volatile char choice) {
 	
 } // end delay_T_msec_timer0()
 
+void LED_conditions (int lights){
+	
+	switch(lights){
+		case 1:
+		break;
+		case 2:
+		break;
+		default:
+		PORTB = 0b00000011; //Turns OFF PB0/1
+		break;
+	}
+	
+}
