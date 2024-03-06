@@ -37,15 +37,14 @@ int main(void)
 	//Switch
 	DDRC = 0b00000000; //sets all pins to inputs
 	
-	
-	while (PINC & 0b00000001) //this logic causes the program to stay in the loop if pin PD2 is high (switch not pressed)
-	{
-		
-		//this loop does nothing
-	}
-	
    while(1)
    {
+	   while (PINC & 0b00000001) //this logic causes the program to stay in the loop if pin PD2 is high (switch not pressed)
+	   {
+		   
+		   //this loop does nothing
+	   }
+	   
 		step_n_CW(36,2000/36);
 		wait(500,2);
 		step_n_CCW(12,1000/12);
