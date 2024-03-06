@@ -1,24 +1,28 @@
 /*
  * stepper_example.c
  *
- * Created: 3/8/2021 1:42:42 PM
- * Author : wwclark
+ * Last Updated: 3/5/3034
+ * Author : Maddi Viteri
  */ 
 
 // This program applies full wave stepping to a bi-polar stepper motor.
 //  The motor will take two steps forward, one step back, in an infinite loop.
 
 #include <avr/io.h>
+#include <math.h>
 
 // Functions
-void step_CW( void );
-void step_CCW( void );
+void step_CW(int delay_ms);
+void step_CCW(int delay_ms);
 void wait(volatile int multiple, volatile char time_choice);
+void step_n_CW(int n, int delay_ms);
+void step_n_CCW(int n, int delay_ms);
 void delay_T_msec_timer0(char choice);
 
 //** GLOBAL VARIABLES **
 int phase_step = 1; // We will use wave stepping, so the steps are numbered 1-4, then will repeat.  
 int lights = 0; // use this to poll for light conditions
+//int delay_ms = 200;
 
 int main(void)
 {
@@ -42,97 +46,98 @@ int main(void)
 	
    while(1)
    {
-	// Step forward two steps
-	step_CW(); //step_CW()
-	wait(500,2); // delay so that motor doesn't skip steps
-	step_CW(); //step_CW()
-	wait(250,2); // delay so that motor doesn't skip steps
-
-	// Step backward one step
-	step_CCW(); // step_CCW()
-	wait(750,2); // delay so that motor doesn't skip steps
-  
+		step_n_CW(36,2000/36);
+		wait(500,2);
+		step_n_CCW(12,1000/12);
+		wait(500,2);
+		step_n_CW(24,2000/24);
    } // end main while
 
 }
 
-void step_CCW()
+void step_CCW(int delay_ms)
 {
 	// This function advances the motor counter-clockwise one step.  Follow the full-wave stepping table in Stepper Motor Control.ppt for MEMS 1049 course. phase1a = PORTD_7, phase1b = PORTD_6
 	// phase2a = PORTD_5, phase2b = PORTD_4
 	
-	
+	PORTB = 0b00000001; //Turns on PB1 for counter clockwise
 	
 	switch (phase_step) {
 		case 1:
-		// step to 2
-		PORTB = 0b00000001; //Turns on PB1 for counter clockwise
-		PORTD = 0b00010000;
-		phase_step = 2;
-		PORTB = 0b00000011; //Turns OFF PB0/1
+			// step to 2
+			PORTB = 0b00000001; //Turns on PB1 for counter clockwise
+			PORTD = 0b00010000;
+			phase_step = 2;
+			wait(delay_ms,2);
+			PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 2:
-		// step to 3
-		PORTB = 0b00000001; //Turns on PB1 for counter clockwise
-		PORTD = 0b01000000;
-		phase_step = 3;
-		PORTB = 0b00000011; //Turns OFF PB0/1
+			// step to 3
+			PORTD = 0b01000000;
+			phase_step = 3;
+			wait(delay_ms,2);
+			PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 3:
 		// step to 4;
-		PORTB = 0b00000001; //Turns on PB1 for counter clockwise
-		PORTD = 0b00100000;
-		phase_step = 4;
-		PORTB = 0b00000011; //Turns OFF PB0/1
+			PORTD = 0b00100000;
+			phase_step = 4;
+			wait(delay_ms,2);
+			PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 4:
-		// step to 1;
-		PORTB = 0b00000001; //Turns on PB1 for counter clockwise
-		PORTD = 0b10000000;
-		phase_step = 1;
-		PORTB = 0b00000011; //Turns OFF PB0/1
+			// step to 1;
+			PORTD = 0b10000000;
+			phase_step = 1;
+			wait(delay_ms,2);
+			PORTB = 0b00000011; //Turns OFF PB0/1
 	break;  }
 	
 	//PORTB = 0b00000011; //Turns OFF PB0/1
 	
 }// end step_CCW
 
-void step_CW() {
+void step_CW(int delay_ms) {
 	// This function advances the motor clockwise one step.  Follow the full-wave stepping table in Stepper Motor Control.ppt for MEMS 1049 course. Our stepper motor phases are assigned to Port pins as follows: phase1a = PORTD_7, phase1b = PORTD_6, phase2a = PORTD_5, phase2b = PORTD_4
 
-	
+	PORTB = 0b00000010; //Turns on PB0 for clockwise
 	
 	switch (phase_step) {
 		case 1:
 		// step to 4
-		PORTB = 0b00000010; //Turns on PB0 for clockwise
-		PORTD = 0b00100000;
-		phase_step = 4;
-		PORTB = 0b00000011; //Turns OFF PB0/1
+			//PORTB = 0b00000010; //Turns on PB0 for clockwise
+			PORTD = 0b00100000;
+			phase_step = 4;
+			wait(delay_ms,2);
+			PORTB = 0b00000011; //Turns OFF PB0/1
+			
 		break;
 		case 2:
 		// step to 1
-		PORTB = 0b00000010; //Turns on PB0 for clockwise
-		PORTD = 0b10000000;
-		phase_step = 1;
-		PORTB = 0b00000011; //Turns OFF PB0/1
+			//PORTB = 0b00000010; //Turns on PB0 for clockwise
+			PORTD = 0b10000000;
+			phase_step = 1;
+			wait(delay_ms,2);
+			PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 3:
-		// step to 2;
-		PORTB = 0b00000010; //Turns on PB0 for clockwise
-		PORTD = 0b00010000;
-		phase_step = 2;
-		PORTB = 0b00000011; //Turns OFF PB0/1
+			// step to 2;
+			//PORTB = 0b00000010; //Turns on PB0 for clockwise
+			PORTD = 0b00010000;
+			phase_step = 2;
+			wait(delay_ms,2);
+			PORTB = 0b00000011; //Turns OFF PB0/1
 		break;
 		case 4:
-		// step to 3;
-		PORTB = 0b00000010; //Turns on PB0 for clockwise
-		PORTD = 0b01000000;
-		PORTB = 0b00000011; //Turns OFF PB0/1
-		phase_step = 3;
+			// step to 3;
+			//PORTB = 0b00000010; //Turns on PB0 for clockwise
+			PORTD = 0b01000000;
+			phase_step = 3;
+			wait(delay_ms,2);
+			PORTB = 0b00000011; //Turns OFF PB0/1
 	break;  }
 	
-	//PORTB = 0b00000011; //Turns OFF PB0/1
+	
 	
 }// end step_CW
 
@@ -144,14 +149,31 @@ void wait(volatile int multiple, volatile char time_choice) {
 		Outputs: None
 	*/
 	
-	
+	//PORTB = 0b00000011; //Turns OFF PB0/1
 	
 	while (multiple > 0) {
-		//PORTB = 0b00000011; //Turns OFF PB0/1
 		delay_T_msec_timer0(time_choice); 
 		multiple--;
 	}
 } // end wait()
+
+void step_n_CW(int n, int delay_ms) {
+	//int step_number = (int)(n / 7.5);
+	//printf(itoa(step_number));
+	for (int i = 0; i < n; i++) {
+		step_CW(delay_ms);
+		//wait(delay_ms, 2);
+	}
+}
+
+void step_n_CCW(int n, int delay_ms) {
+	//int step_number = (int)(n / 7.5);
+	//printf(itoa(step_number));
+	for (int i = 0; i < n; i++) {
+		step_CCW(delay_ms); 
+		//wait(delay_ms, 2);
+	}
+}
 
 void delay_T_msec_timer0(volatile char choice) {
     //*** delay T ms **
@@ -197,16 +219,16 @@ void delay_T_msec_timer0(volatile char choice) {
 	
 } // end delay_T_msec_timer0()
 
-void LED_conditions (int lights){
+//void LED_conditions (int lights){
 	
-	switch(lights){
-		case 1:
-		break;
-		case 2:
-		break;
-		default:
-		PORTB = 0b00000011; //Turns OFF PB0/1
-		break;
-	}
-	
-}
+// 	switch(lights){
+// 		case 1:
+// 		break;
+// 		case 2:
+// 		break;
+// 		default:
+// 		PORTB = 0b00000011; //Turns OFF PB0/1
+// 		break;
+// 	}
+// 	
+// }
