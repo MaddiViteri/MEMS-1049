@@ -1,9 +1,10 @@
 /*
- * TEST.c
+ * uC2 LCD
  *
  * Created: 3/30/2024 5:58:49 PM
  * Author : maddiviteri
  */ 
+
 #define F_CPU 16000000
 #include <avr/io.h>
 #include <util/delay.h>
