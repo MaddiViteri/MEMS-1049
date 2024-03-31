@@ -1,0 +1,106 @@
+/*
+ * TEST.c
+ *
+ * Created: 3/30/2024 5:58:49 PM
+ * Author : maddiviteri
+ */ 
+#define F_CPU 16000000
+#include <avr/io.h>
+#include <util/delay.h>
+#include <stdio.h>
+#include <string.h>
+
+#define LCD_RS PB0
+#define LCD_EN PB1
+
+void GotoXY (unsigned char x, unsigned char y);
+void Write_String(char *str);
+void Write_LCD_Data(unsigned char Data);
+void Initalise_LCD();
+void Write_LCD_Commands(unsigned char Command);
+
+//Main Program
+int main(void)
+{
+	
+	unsigned char N=5;
+	
+	//LCD Screen pins are in port B
+	// RS-> PB0, EN-> PB1, DB4-> PB2, DB5-> PB3, DB6-> PB4, DB7-> PB5
+	DDRB = 0B00000000; //Initialize PortB as output pins
+	
+	Initalise_LCD();
+	Write_String("Mechatronics");
+	
+}
+
+//Functions
+
+void GotoXY (unsigned char x, unsigned char y){
+	
+	if (y == 0){
+		Write_LCD_Commands(0X80 + x);
+	}
+	
+	if (y==1){
+		Write_LCD_Commands(0XC0 + x);
+	}
+	
+}//End GotoXY
+
+void Write_String(char *str)
+{
+	int i;
+	for (i = 0; str[i] != 0; i++){
+		Write_LCD_Data(str[i]);
+	}
+}//End Write String
+
+void Write_LCD_Data(unsigned char Data)
+{
+	//sending upper bit of data
+	PORTB = (PORTB & 0b00001111) | (Data & 0b00001111); //Sending the upper bit of command
+	PORTB |= (1<<LCD_RS); //RS = 0
+	PORTB |= (1<<LCD_EN); //EN = 1
+	_delay_ms(2);
+	PORTB &= ~(1<<LCD_EN); //EN = 0
+	
+	//sending lower data
+	PORTB = (PORTB & 0b00001111) | (Data <<4);
+	PORTB |= (1<<LCD_EN);//EN = 1
+	_delay_ms(2);
+	PORTB &= ~(1<<LCD_EN);//EN = 0
+	_delay_ms(2);
+} //End write LCD data
+
+void Initalise_LCD()
+{
+	
+	Write_LCD_Commands(0b00000010);		// Return Home
+	Write_LCD_Commands(0b00111000);		// Function Set - whether we want data in 4 bit or 8 bit mode
+	Write_LCD_Commands(0b00001100);		// Cursor ON/OFF (currently off)
+	Write_LCD_Commands(0b00000110);		// Entry Mode Set (which direction does cursor move) (incrementing + shift off)
+	Write_LCD_Commands(0b00000001);		// Clear Display
+	
+} //End initalise LCD
+
+void Write_LCD_Commands(unsigned char Command) //squeezes data from 8 bits to 4 bits
+{
+	//Sending the upper bit of command
+	PORTB = (PORTB & 0b00001111) | (Command & 0b00001111);	 
+	PORTB &= ~(1<<LCD_RS);						//RS = 0 so LCD can be accepting commands
+	//to put data in, pull EN high and then low
+	PORTB |= (1<<LCD_EN);						//EN = 1 (high)
+	_delay_ms(2);
+	PORTB &= ~(1<<LCD_EN);						//EN = 0 (low)
+	_delay_ms(2);					
+	
+	//Send the lower bit of the command
+	PORTB = (PORTB & 0b00001111) | (Command<<4);
+	PORTB |= (1<<LCD_EN);						//EN = 1
+	_delay_ms(2);
+	PORTB &= ~(1<<LCD_EN);						//EN = 0
+	_delay_ms(2);
+} //End write lcd commands
+
+
