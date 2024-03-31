@@ -24,7 +24,7 @@ void Write_LCD_Commands(unsigned char Command);
 int main(void)
 {
 	
-	unsigned char N=5;
+	//unsigned char N=5;
 	
 	//LCD Screen pins are in port B
 	// RS-> PB0, EN-> PB1, DB4-> PB2, DB5-> PB3, DB6-> PB4, DB7-> PB5
@@ -103,5 +103,4 @@ void Write_LCD_Commands(unsigned char Command) //squeezes data from 8 bits to 4 
 	PORTB &= ~(1<<LCD_EN);						//EN = 0
 	_delay_ms(2);
 } //End write lcd commands
-
 
