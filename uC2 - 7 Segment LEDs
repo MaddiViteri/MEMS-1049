@@ -1,0 +1,60 @@
+#include <avr/io.h>
+#include <util/twi.h>
+#include <util/delay.h>
+
+#define F_SCL 100000UL // SCL frequency
+#define TWI_PRESCALE 1
+#define TWBR_VAL ((((F_CPU / F_SCL) / TWI_PRESCALE) - 16 ) / 2)
+
+void twi_init(void) {
+    // Set SCL to 400kHz
+    TWSR = 0x00; // set prescaler to zero
+    TWBR = (uint8_t)TWBR_VAL; // set SCL frequency in TWI Bit Rate Register
+}
+
+// Function to start the communication
+void twi_start(void) {
+    // Send start condition
+    TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);
+    while (!(TWCR & (1<<TWINT)));
+}
+
+// Function to stop the communication
+void twi_stop(void) {
+    // Transmit stop condition
+    TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
+}
+
+// Function to write data
+void twi_write(uint8_t u8data) {
+    TWDR = u8data;
+    TWCR = (1 << TWINT) | (1 << TWEN);
+    while (!(TWCR & (1<<TWINT)));
+}
+
+int main(void) {
+    twi_init(); // Initialize the TWI
+    
+    twi_start(); // Start TWI
+    twi_write(HT16K33_ADDRESS << 1); // HT16K33 address with write operation
+    twi_write(0x21); // System oscillator on
+    twi_stop(); // Stop TWI
+
+    twi_start();
+    twi_write(HT16K33_ADDRESS << 1);
+    twi_write(0x81); // Display on, no blinking
+    twi_stop();
+
+    twi_start();
+    twi_write(HT16K33_ADDRESS << 1);
+    twi_write(0xEF); // Full brightness
+    twi_stop();
+
+    // Your code to interact with the HT16K33 goes here
+
+    while(1) {
+        // Main loop
+    }
+
+    return 0;
+}
