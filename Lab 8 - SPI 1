@@ -12,15 +12,18 @@
  */ 
 
 #include <avr/io.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-void delay_T_msec_timer0(volatile char choice;
-int send_to_MAX7221 ( unsigned char command unsigned char data);
-void decoding_Mode ();
-void scan_Limit ();
-void display_On ();
-void display_Blank ();
-void send_Data(unsigned char data);
-void set_Up();
+void delay_T_msec_timer0(volatile char choice);
+int send_to_MAX7221 (unsigned char command, unsigned char data);
+void decoding_Mode (unsigned char data);
+void scan_Limit (unsigned char numb_of_displays);
+void display_On (unsigned char which_display);
+void display_Blank (unsigned char which_display);
+void display_Test (unsigned char which_display);
+void set_Value_Of(unsigned char digit, unsigned char data);
+void set_Up(); //here is where you want to change the settings for set up
 
 
 int main(void) {
@@ -47,6 +50,7 @@ int main(void) {
 	*/
 
 	set_Up(); //runs set up function
+	
 	while (1) {
 		//display day
 		//500 ms delay
@@ -102,7 +106,7 @@ void delay_T_msec_timer0(volatile char choice) {
 	
 } // end delay_T_msec_timer0()
 
-int send_to_MAX7221 ( unsigned char command, unsigned char data)
+int send_to_MAX7221 (unsigned char command, unsigned char data)
 {
 	PORTB = PORTB & 0B11111011; //CLear PB2, which is the SS bit so that transmission can begin
 
@@ -117,50 +121,93 @@ int send_to_MAX7221 ( unsigned char command, unsigned char data)
 return 0;
 } // end sent_to_MAX7221
 
-void decoding_Mode ()
+void decoding_Mode (unsigned char data)
+//Turns decode mode on or off for different digits(displays)
 {
-	unsigned char command = ;
-	unsigned char data = ;
-	int send_to_MAX7221 (command, data);
+	//D11 D10 D9 D8 -> 1001
+	//setting bits in data to 1 will turn ON decoding mode (useful for numbers)
+	//setting bits in data to 0 will turn OFF decoding mode (useful for letters)
+	unsigned char command = 0b00001001; //this d0es not change
+	send_to_MAX7221 (command, data);
 } // end decoding_Mode
 
-void decoding_Mode ()
+void scan_Limit (unsigned char numb_of_displays)
+//set scan limit (equal to or less than the number of displays you have)
 {
-	unsigned char command = ;
-	unsigned char data = ;
-	int send_to_MAX7221 (command, data);
-} // end decoding_Mode
-
-void scan_Limit ()
-{
-	unsigned char command = ;
-	unsigned char data = ;
-	int send_to_MAX7221 (command, data);
+	unsigned char command = 0b00001011; //this does not change
+	send_to_MAX7221 (command, numb_of_displays);
 } // end scan_Limit
 
-void display_On ()
+void display_On (unsigned char which_display)
+//turns display off or on (duh)
 {
-	unsigned char command = ;
-	unsigned char data = ;
-	int send_to_MAX7221 (command, data);
+	unsigned char command = 0b00001100;//this does not change
+	send_to_MAX7221 (command, which_display);
 } // end display_On
 
-void display_Blank ()
+void display_Blank (unsigned char which_display)
 {
-	unsigned char command = ;
-	unsigned char data = ;
-	int send_to_MAX7221 (command, data);
+	unsigned char command = 00001111;//this does not change
+	send_to_MAX7221 (command, which_display);
 } // end display_Blank
 
-void send_Data(unsigned char data)
+void display_Test (unsigned char which_display)
+//turns on all segments in the display
 {
-	unsigned char command = ;
-	int send_to_MAX7221 (command, data);
-} // end send_Data
+	unsigned char command = 0b00001111;//this does not change
+	send_to_MAX7221 (command, which_display);
+} // end display_Test
+
+void set_Value_Of(unsigned char digit, unsigned char data)
+//digit identifies the display (DG0 or DG1), where data is the number you want to display (0-9)
+//this is only for numbers where the display is decoding enabled
+{
+	//D11 D10 D9 D8
+	switch(digit)
+	{
+		case 0:
+			//0001
+			send_to_MAX7221 (0b00000001, data);
+			break;
+		case 1:
+			//0010
+			send_to_MAX7221 (0b00000010, data);
+			break;
+		case 2:
+			//0100
+			send_to_MAX7221 (0b00000100, data);
+			break;
+		case 3:
+			//1000
+			send_to_MAX7221 (0b00001000, data);
+			break;
+		case 4:
+			//0101
+			send_to_MAX7221 (0b00000101, data);
+			break;
+		case 5:
+			//0110
+			send_to_MAX7221 (0b00000110, data);
+			break;
+		case 6:
+			//0111
+			send_to_MAX7221 (0b00000111, data);
+			break;
+		case 7:
+			//1000
+			send_to_MAX7221 (0b00001000, data);
+			break;
+		default: break;
+	}//end of switch case
+		
+}//end of set_Value_Of
 
 void set_Up()
+//Preset settings for this instance of code, change as necessary
 {
-	void decoding_Mode ();
-	void scan_Limit ();
-	void display_On ();
+	decoding_Mode(0b00000011); //sets digits 0 and 1 to decode mode
+	scan_Limit(0b00000010); //set scan limit to 2 because there are only 2 7 segment displays
+	display_On(0b00000001); //turns on DG0
+	display_On(0b00000010); //turns on DG
+	
 }// end set_Up
