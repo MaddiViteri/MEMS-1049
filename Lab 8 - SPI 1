@@ -70,6 +70,22 @@ int main(void) {
 
 }
 
+void wait(volatile int multiple, volatile char time_choice) {
+	/* This subroutine calls others to create a delay.
+		 Total delay = multiple*T, where T is in msec and is the delay created by the called function.
+	
+		Inputs: multiple = number of multiples to delay, where multiple is the number of times an actual delay loop is called.
+		Outputs: None
+	*/
+	
+	//PORTB = 0b00000011; //Turns OFF PB0/1
+	
+	while (multiple > 0) {
+		delay_T_msec_timer0(time_choice); 
+		multiple--;
+	}
+} // end wait()
+
 void delay_T_msec_timer0(volatile char choice) {
     //*** delay T ms **
     /* This subroutine creates a delay of T msec using TIMER0 with prescaler on clock, where, for a 16MHz clock:
