@@ -49,7 +49,15 @@ int main(void) {
 	PORTB |= 0b00000100; //PORTB |= 1 << PORTB2;  // disable Secondary (this clears SBIF flag)
 	*/
 
-	set_Up(); //runs set up function
+	//Set up MAX7221
+	decoding_Mode(0b00000011); //sets digits 0 and 1 to decode mode
+	scan_Limit(0b00000010); //set scan limit to 2 because there are only 2 7 segment displays
+	
+	//test displays
+	display_On(0b00000001);
+	delay_T_msec_timer0(500);
+	display_On(0b00000010);
+	delay_T_msec_timer0(500);
 	
 	while (1) {
 		//display day
@@ -205,9 +213,11 @@ void set_Value_Of(unsigned char digit, unsigned char data)
 void set_Up()
 //Preset settings for this instance of code, change as necessary
 {
+	/*
 	decoding_Mode(0b00000011); //sets digits 0 and 1 to decode mode
 	scan_Limit(0b00000010); //set scan limit to 2 because there are only 2 7 segment displays
 	display_On(0b00000001); //turns on DG0
 	display_On(0b00000010); //turns on DG
+	*/
 	
 }// end set_Up
