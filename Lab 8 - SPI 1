@@ -2,7 +2,7 @@
  * SPI_Main.cpp
  *
  * Created: 04/01/2024
- * Author: Maddi Viter
+ * Author: Maddi Viteri
  
    This program sets up SPI in Main mode, mode 0, with SCK frequency of Fosc/16.
    Then the letter 'R' is transmitted.
