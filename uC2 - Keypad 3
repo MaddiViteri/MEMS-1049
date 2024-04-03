@@ -1,0 +1,187 @@
+
+#include <avr/io.h>
+#define F_CPU 16000000UL  // 16 MHz
+#include <util/delay.h>
+
+void USARTinit (void);
+void USARTsend (unsigned char ch);
+
+void ScanRowOne();
+void ScanRowTwo();
+void ScanRowThree();
+void ScanRowFour();
+
+int main(void)
+{
+	/* The following are columns and they are inputs */
+	DDRD &= 0b00000100;		//&= set pin2(PD2) to input mode
+	DDRD &= 0b00001000;		//&= set pin3(PD3) to input mode
+	DDRD &= 0b00010000;		//&= set pin4(PD4) to input mode
+	
+	/* The following are rows and they are outputs */
+	DDRD |= 0b00100000;		//|= set pin5(PD5) to output mode
+	DDRD |= 0b01000000;		//|= set pin6(PD6) to output mode
+	DDRD |= 0b10000000;		//|= set pin7(PD7) to output mode
+	DDRB |= 0b00000001;		//|= set pin8(PB0) to output mode
+	
+	PORTD |= 0b00000100;	// Enable Internal Pull-Up at PD2
+	PORTD |= 0b00001000;	// Enable Internal Pull-Up at PD3
+	PORTD |= 0b00010000;	// Enable Internal Pull-Up at PD4
+	
+	USARTinit();			//initialize the USART
+	
+	while(1)
+	{
+		ScanRowOne();
+		ScanRowTwo();
+		ScanRowThree();
+		ScanRowFour();
+	}
+	return 0;
+}
+/*-------------------------Function Calls ------------------------*/
+void USARTinit (void)
+{	UCSR0B = (1<<TXEN0);
+	UCSR0C = (1<< UCSZ01)|(1<<UCSZ00);
+	UBRR0L = 103;
+}
+
+void USARTsend (unsigned char ch)
+{
+	while (!(UCSR0A&(1<<UDRE0)));	//wait until UDR0 is empty
+	{
+		UDR0 = ch;					//transmit character
+	}
+}
+
+void ScanRowOne()
+{
+	PORTB = 0b11111110;	//Set R1 to LOW - scan row 1
+	PORTD = 0b11111111;	//De-active all other bits
+	_delay_ms(10);
+	if ((PIND & (1<<2)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<2)) == 0)
+		{
+			USARTsend ('3');	//transmit ‘3’
+		}
+	}
+	else
+	if ((PIND & (1<<3)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<3)) == 0)
+		{
+			USARTsend ('2');	//transmit ‘2’
+		}
+	}
+	else
+	if ((PIND & (1<<4)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<4)) == 0)
+		{
+			USARTsend ('1');	//transmit ‘1’
+		}
+	}
+}
+
+void ScanRowTwo()
+{
+	PORTB = 0b11111111;	//De-active all other bits
+	PORTD = 0b01111111;	//Set R2 to LOW - scan row 2
+	_delay_ms(10);
+	if ((PIND & (1<<2)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<2)) == 0)
+		{
+			USARTsend ('6');	//transmit ‘6’
+		}
+	}
+	else 
+	if ((PIND & (1<<3)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<3)) == 0)
+		{
+			USARTsend ('5');	//transmit ‘5’
+		}
+	}
+	else
+	if ((PIND & (1<<4)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<4)) == 0)
+		{
+			USARTsend ('4');	//transmit ‘4’
+		}
+	}
+}
+
+void ScanRowThree()
+{
+	PORTB = 0b11111111;	//De-active all other bits
+	PORTD = 0b10111111;	//Set R3 to LOW - scan row 3
+	_delay_ms(10);
+	if ((PIND & (1<<2)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<2)) == 0)
+		{
+			USARTsend ('9');	//transmit ‘9’
+		}
+	}
+	else
+	if ((PIND & (1<<3)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<3)) == 0)
+		{
+			USARTsend ('8');	//transmit ‘8’
+		}
+	}
+	else
+	if ((PIND & (1<<4)) == 0)
+	{
+		_delay_ms(100);
+		if ((PIND & (1<<4)) == 0)
+		{
+			USARTsend ('7');	//transmit ‘7’
+		}
+	}
+}
+
+void ScanRowFour()
+{
+		PORTB = 0b11111111;	//De-active all other bits
+		PORTD = 0b11011111;	//Set R4 to LOW - scan row 4
+		_delay_ms(10);
+		if ((PIND & (1<<2)) == 0)
+		{
+			_delay_ms(100);
+			if ((PIND & (1<<2)) == 0)
+			{
+				USARTsend ('#');	//transmit ‘#’
+			}
+		}
+		else
+		if ((PIND & (1<<3)) == 0)
+		{
+			_delay_ms(100);
+			if ((PIND & (1<<3)) == 0)
+			{
+				USARTsend ('0');	//transmit ‘0’
+			}
+		}
+		else
+		if ((PIND & (1<<4)) == 0)
+		{
+			_delay_ms(100);
+			if ((PIND & (1<<4)) == 0)
+			{
+				USARTsend ('*');	//transmit ‘*’
+			}
+		}
+}
