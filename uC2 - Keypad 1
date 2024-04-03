@@ -2,51 +2,63 @@
 #include <avr/io.h>
 #define F_CPU 16000000UL  // 16 MHz
 #include <util/delay.h>
-
+/*
 void USARTinit (void);
 void USARTsend (unsigned char ch);
+*/
 
-unsigned char ch;
+unsigned char temp = 0;
 
 int main(void)
 {
+	DDRD = 0b01000000;
+	PORTD = 0b01000000;
+	
 	/* The following set columns as inputs */
-	DDRD &= 0b00000100;		//&= set pin2(PD2) to input mode
-	DDRD &= 0b00001000;		//&= set pin3(PD3) to input mode
-	DDRD &= 0b00010000;		//&= set pin4(PD4) to input mode
+	DDRC &= 0b00000001;	//&= set pin5(PC0) to input mode //COLUMN 1, BLUE WIRE, PC0
+	DDRC &= 0b00000010;		//&= set pin6(PC1) to input mode //COLUMN 2, PURPLE WIRE, PC1
+	DDRC &= 0b00000100;		//&= set pin7(PC2) to input mode //COLUMN 3, BLACK WIRE, PC2
 	
 	/* The following set rows as outputs */
-	DDRD |= 0b00100000;		//|= set pin5(PD5) to output mode
-	DDRD |= 0b01000000;		//|= set pin6(PD6) to output mode
-	DDRD |= 0b10000000;		//|= set pin7(PD7) to output mode
-	DDRB |= 0b00000001;		//|= set pin8(PB0) to output mode
+	DDRD |= 0b10000000;		//|= set pin1(PD7) to output mode //ROW 1, RED WIRE, PD7
+	DDRC |= 0b00001000;		//|= set pin2(PC3) to output mode //ROW 2, ORANGE WIRE, PC3
+	DDRC |= 0b00010000;		//|= set pin3(PC4) to output mode //ROW 3, YELLOW WIRE, PC4
+	DDRB |= 0b00100000;		//|= set pin4(PC5) to output mode //ROW 4, GREEN WIRE, PC5
 	
 	/* The following enable the pull-up resistors */
-	PORTD |= 0b00000100;	// Enable Internal Pull-Up at PD2
-	PORTD |= 0b00001000;	// Enable Internal Pull-Up at PD3
-	PORTD |= 0b00010000;	// Enable Internal Pull-Up at PD4
+	PORTC |= 0b00000001;	// Enable Internal Pull-Up at PD2   SHOULD BE PC0
+	PORTC |= 0b00000010;	// Enable Internal Pull-Up at PD3	SHOULD BE PC2
+	PORTC |= 0b00000100;	// Enable Internal Pull-Up at PD4	SHOULD BE PC4
 	
-	USARTinit();			// Initialize the USART  
 	
-    while (1) 
-    {
-		PORTB = 0b11111110;	//Set R1 to LOW - scan row 1
-		PORTD = 0b11111111;	//De-active all other bits
+	
+//SARTinit();			// Initialize the USART
+	
+	while (1)
+	{
+		PORTD = 0b00000000;
+
+		PORTD = 0b01111111;	//Set R1 to LOW - scan row 1
+		PORTC = 0b11111111;	//De-active all other bits
 		
+		//goal is three
 		//if ((PIND & (1<<2)) == 0)
-		if (PIND == 0b11111011)
+		if (PIND == 0b01111111) //scan row 1 red wire, PD7
 		{
 			_delay_ms(100);
-			if (PIND == 0b11111011)
+			if (PINC == 0b11111011)//scan column 3 black wire pc2
 			{
-				USARTsend ('3');	//Transmit ‘3’ 
+		//USARTsend ('3');	//Transmit ‘3’ 
+		//temp = 3;
+				//PD6 on
+				PORTD = 0b00000000;
 			}
 		}
-    }
+	}
 	return 0;
 }
 
-/* -------------------- Functions ------------------------ */
+/* -------------------- Functions ------------------------ 
 void USARTinit (void)
 {  UCSR0B = (1<<TXEN0);
 	UCSR0C = (1<< UCSZ01)|(1<<UCSZ00);
@@ -59,5 +71,4 @@ void USARTsend (unsigned char ch)
 	{
 		UDR0 = ch;						//transmit ch
 	}
-}
-
+} */
