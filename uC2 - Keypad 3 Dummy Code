@@ -1,0 +1,118 @@
+#include <avr/io.h>
+#define F_CPU 16000000UL  // 16 MHz
+#include <util/delay.h>
+
+/*Headers*/
+void scan_Row_One();
+
+/*Main Program Loop*/
+int main(void)
+{
+	/* Set all PORTC pins as inputs with pull-ups enabled */
+	DDRC = 0b00000000;  // All pins of PORTC are inputs
+	PORTC = 0b11111111; // Enable pull-ups on PORTC
+
+	/* Set PD7 as an output */
+	DDRD |= 0b10000000; // PD7 as output
+	PORTD |= 0b10000000; // Initially high
+
+	/*Set up LED*/
+	DDRB = 0b00000010; // LED pin to output
+	PORTB = 0b00000010;
+
+	while (1)
+	{
+		scan_Row_One();
+	}
+
+	return 0;
+} //end main
+
+/*Functions*/
+
+void scan_Row_One()
+//this function scans row one to detect a key press in any column
+{
+	/* Drive PD7 (row 1) low */
+	PORTD &= 0b01111111; // Set PD7 to low
+	
+	_delay_ms(10); // Delay for debouncing/stabilization
+	
+	/* Check if any button in row 1 is pressed */
+	// Check if button in column 1 (PC0) is pressed
+	if (!(PINC & 0b00000001))
+	{
+		_delay_ms(100); // Software debounce
+		// Do something specific for button in row 1, column 1
+		PORTB = 0b00000000;
+		_delay_ms(100);
+		PORTB = 0b00000010;
+	}
+	// Check if button in column 2 (PC1) is pressed
+	else if (!(PINC & 0b00000010))
+	{
+		_delay_ms(100); // Software debounce
+		// Do something specific for button in row 1, column 2
+		PORTB = 0b00000000;
+		_delay_ms(100);
+		PORTB = 0b00000010;
+	}
+	// Check if button in column 3 (PC2) is pressed
+	else if (!(PINC & 0b00000100))
+	{
+		_delay_ms(100); // Software debounce
+		// Do something specific for button in row 1, column 3
+		PORTB = 0b00000000;
+		_delay_ms(100);
+		PORTB = 0b00000010;
+	}
+
+	/* Reset row 1 to high */
+	PORTD |= 0b10000000; // Set PD7 back to high
+	
+	_delay_ms(100); // Delay before the next scan to reduce bouncing/effects
+}// end scan_Row_One
+
+void scan_Row_Two()
+//this function scans row two to detect a key press in any column
+{
+	/* Drive PC3 (row 2) low */
+	PORTC &= 0b11110111; // Set PC3 to low
+	
+	_delay_ms(10); // Delay for debouncing/stabilization
+	
+	/* Check if any button in row 1 is pressed */
+	// Check if button in column 1 (PC0) is pressed
+	if (!(PINC & 0b00000001))
+	{
+		_delay_ms(100); // Software debounce
+		// Do something specific for button in row 1, column 1
+		PORTB = 0b00000000;
+		_delay_ms(100);
+		PORTB = 0b00000010;
+	}
+	// Check if button in column 2 (PC1) is pressed
+	else if (!(PINC & 0b00000010))
+	{
+		_delay_ms(100); // Software debounce
+		// Do something specific for button in row 1, column 2
+		PORTB = 0b00000000;
+		_delay_ms(100);
+		PORTB = 0b00000010;
+	}
+	// Check if button in column 3 (PC2) is pressed
+	else if (!(PINC & 0b00000100))
+	{
+		_delay_ms(100); // Software debounce
+		// Do something specific for button in row 1, column 3
+		PORTB = 0b00000000;
+		_delay_ms(100);
+		PORTB = 0b00000010;
+	}
+
+	/* Reset row 2 to high */
+	PORTC |= 0b00001000; // Set PC3 back to high
+	
+	_delay_ms(100); // Delay before the next scan to reduce bouncing/effects
+}
+
