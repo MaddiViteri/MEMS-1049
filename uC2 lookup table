@@ -1,0 +1,214 @@
+/*
+ * Team14_Project_uC1.cpp
+ *
+ * Created: 3/30/2024 5:09:19 PM
+ * Author : cespa
+ */ 
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stddef.h>
+
+//FUNCTIONS
+void initialize_usart(void); // function to set up USART
+void transmit_data_usart(int); // function to transmit a byte by USART
+int receive_data_usart(void); // Function to receive a byte by USART
+void wait(volatile int multiple, volatile char time_choice);
+void delay_T_msec_timer0(char choice);
+int vlookup_moon (int input);
+int vlookup_sun (int input);
+
+// global variables
+int phase_step = 1; // variable to determine which phase of 1-4 the motor is in
+
+int flag = 0;
+int delay = 150; // delay between steps found by dividing time in ms by number of steps
+char date;
+int sun;
+int moon;
+
+
+//CREATE LOOKUP TABLE
+
+//DEFINE THE STRUCTURE TYPE
+typedef struct
+{
+	uint8_t date;
+	uint8_t positionsun;
+	uint8_t positionmoon;
+	
+} lookuptab;
+
+//SET UP LOOKUP TABLE WITH 5 SPECIAL DATES
+lookuptab lookupTable[] = {
+	{0b00110111, 0b00110110, 0b00001101}, //April 10th - Dr. Clark's Birthday
+	{0b01000001, 0b01000001, 0b00000110}, //April 28th - Graduation
+	{0b01001011, 0b01001011, 0b00001101}, //May 17th - Karinna's Birthday
+	{0b01011100, 0b01011100, 0b00101000}, //June 16th - Maddi's Birthday
+	{0b01110011, 0b01100001, 0b00001101} //July 28th - Cece's Birthday
+};
+
+
+int main(void)
+{
+    // INITIALIZE THE USART WITH THE DESIRED PARAMETERS
+    
+    initialize_usart();
+    
+    wait(2000,2);
+	
+	//SET UP INTERRUPTS
+	EICRA = 0b00001010; // set INT1 and INT0 to trigger on falling edge
+	sei(); // enable global interrupt, must include AVR/interrupt.h header
+	
+	return 0;
+}
+
+
+// date interrupts
+ISR(INT0_vect)
+{
+	sei(); // enable nested interrupt
+	EIMSK = 0b00000000; // disable both interrupts
+	
+	//use vlookup to find the number of steps for the sun in binary
+	sun = vlookup_sun(date);
+	
+	transmit_data_usart(sun);
+	
+	wait(10,2);
+	
+	
+	//use vlookup to find the number of steps for the earth/moon in binary
+	moon = vlookup_moon(date);
+	
+	transmit_data_usart(moon);
+	
+	wait(10,2);
+	
+	
+	EIMSK = 0b00000010; // enable INT1
+	while ((flag = 0)); // do nothing until INT0 says to exit and keep spinning
+	EIFR = 0b00000001; // clear INT0 flag
+}
+
+ISR(INT1_vect)
+{
+	EIFR = 0b00000011; // clear both flags
+	flag = 1; // set flag to kick out of while loop in INT0
+}
+
+
+void initialize_usart(void) // function to set up USART
+{
+	UCSR0B = 0b00011000; //(1<<RXEN0); (1<<TXEN0);// enable serial transmission and receiving
+	UCSR0C = 0b00000110; //(1<<UCSZ01) | (1<<UCSZ00); // Asynchronous mode, 8-bit data; no parity; 1 stop bit
+	UBRR0L = 0x67; // 9,600 baud if Fosc = 16MHz
+}
+
+void transmit_data_usart(int data) // Function to transmit a character
+{
+	while (!(UCSR0A & 0b00100000)); // (!(UCSR0A & (1<<UDRE0))); //Poll to make sure transmit buffer is ready,
+	// then send data
+	
+	//UCSR0A is a register in the ATmega328P microcontroller that contains various status flags related to USART communication
+	//UDRE0 (USART Data Register Empty)indicates whether the transmit buffer (UDR0) is ready to accept new data
+	//When UDRE0 is set, it means that the transmit buffer is empty and ready to receive new data
+	//The expression UCSR0A & 0b00100000 performs a bitwise AND operation between the value of UCSR0A and 0b00100000, which isolates the UDRE0 flag
+	//The while loop continuously checks the value of UDRE0. The loop will continue executing until the transmit buffer is empty, meaning UDRE0 is set to 1
+	//it waits for the transmit buffer to become available for sending new data
+	
+	UDR0 = data;
+	
+	//setting the USART Data Register (UDR0) equal to data is transmitting the character over USART
+}
+
+int receive_data_usart(void) // Function to receive a character
+{
+	while (!(UCSR0A & 0b10000000)); // ((! (UCSR0A & (1<<RXC0)));
+	// Wait until new data arrives
+	//This condition checks whether the RXC0 flag is not set, meaning that no new data has been received yet
+	//The ! operator is a logical NOT operator that negates the result of the expression inside the parentheses
+	//This is while loop that continues to execute as long as the condition inside the parentheses evaluates to true
+	//(as long as no new data has been received)
+	
+	return UDR0; // read the data
+}
+
+void wait(volatile int multiple, volatile char time_choice) {
+	/* This subroutine calls others to create a delay.
+		 Total delay = multiple*T, where T is in msec and is the delay created by the called function.
+	
+		Inputs: multiple = number of multiples to delay, where multiple is the number of times an actual delay loop is called.
+		Outputs: None
+	*/
+	
+	while (multiple > 0) {
+		delay_T_msec_timer0(time_choice); 
+		multiple--;
+	}
+} // end wait()
+
+void delay_T_msec_timer0(volatile char choice) {
+    //*** delay T ms **
+    /* This subroutine creates a delay of T msec using TIMER0 with prescaler on clock, where, for a 16MHz clock:
+    		for Choice = 1: T = 0.125 msec for prescaler set to 8 and count of 250 (preload counter with 5)
+    		for Choice = 2: T = 1 msec for prescaler set to 64 and count of 250 (preload counter with 5)
+    		for Choice = 3: T = 4 msec for prescaler set to 256 and count of 250 (preload counter with 5)
+    		for Choice = 4: T = 16 msec for prescaler set to 1,024 and count of 250 (preload counter with 5)
+			for Choice = Default: T = .0156 msec for no prescaler and count of 250 (preload counter with 5)
+	
+			Inputs: None
+			Outputs: None
+	*/
+	
+	TCCR0A = 0x00; // clears WGM00 and WGM01 (bits 0 and 1) to ensure Timer/Counter is in normal mode.
+	TCNT0 = 0;  // preload value for testing on count = 250
+	// preload value for alternate test on while loop: TCNT0 = 5;  // preload load TIMER0  (count must reach 255-5 = 250)
+	
+	switch ( choice ) { // choose prescaler
+		case 1:
+			TCCR0B = 0b00000010; //1<<CS01;	TCCR0B = 0x02; // Start TIMER0, Normal mode, crystal clock, prescaler = 8
+		break;
+		case 2:
+			TCCR0B =  0b00000011; //1<<CS01 | 1<<CS00;	TCCR0B = 0x03;  // Start TIMER0, Normal mode, crystal clock, prescaler = 64
+		break;
+		case 3:
+			TCCR0B = 0b00000100; //1<<CS02;	TCCR0B = 0x04; // Start TIMER0, Normal mode, crystal clock, prescaler = 256
+		break; 
+		case 4:
+			TCCR0B = 0b00000101; //1<<CS02 | 1<<CS00; TCCR0B = 0x05; // Start TIMER0, Normal mode, crystal clock, prescaler = 1024
+		break;
+		default:
+			TCCR0B = 0b00000001; //1<<CS00; TCCR0B = 0x01; Start TIMER0, Normal mode, crystal clock, no prescaler
+		break;
+	}
+	
+	while (TCNT0 < 0xFA); // exits when count = 250 (requires preload of 0 to make count = 250)
+	// alternate test on while loop: while ((TIFR0 & (0x1<<TOV0)) == 0); // wait for TOV0 to roll over:
+	// How does this while loop work?? See notes
+	
+	TCCR0B = 0x00; // Stop TIMER0
+	//TIFR0 = 0x1<<TOV0;  // Alternate while loop: Clear TOV0 (note that this is a nonintuitive bit in that it is cleared by writing a 1 to it)
+	
+} // end delay_T_msec_timer0()
+
+int vlookup_sun (int input) {
+	
+	 for (size_t i = 0; i < sizeof(lookupTable) / sizeof(lookupTable[0]); i++) {
+        if (lookupTable[i].date == input) {
+            return lookupTable[i].positionsun;
+        }
+    }
+  return 0;
+}
+
+int vlookup_moon (int input) {
+	
+	for (size_t i = 0; i < sizeof(lookupTable) / sizeof(lookupTable[0]); i++) {
+		if (lookupTable[i].date == input) {
+			return lookupTable[i].positionmoon;
+		}
+	}
+	return 0;
+}
