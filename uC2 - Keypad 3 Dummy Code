@@ -54,24 +54,38 @@ int main(void)
 void scan_Row(char row)
 //this function scans the specified row and stores the detected number in a temp variable
 {
-	char button_Array [3]; //initialize array to store numbers of current row of buttons
+	char button_Array [3] = {'0','0','0'};
+		 //initialize array to store numbers of current row of buttons
 	
-	switch (row){
+	switch (row)
+	{
 		case 1:
-		button_Array = {'1','2','3'}; //row 1
+		//button_Array = {'1','2','3'}; //row 1
+			button_Array [0] = '1';
+			button_Array [1] = '2';
+			button_Array [2] = '3';
 		break;
 		case 2:
-		button_Array = {'4','5','6'}; //row 2
+		//button_Array = {'4','5','6'}; //row 2
+			button_Array [0] = '4';
+			button_Array [1] = '5';
+			button_Array [2] = '6';
 		break;
 		case 3:
-		button_Array = {'7','8','9'}; //row 3
+		//button_Array = {'7','8','9'}; //row 3
+			button_Array [0] = '7';
+			button_Array [1] = '8';
+			button_Array [2] = '9';
 		break;
 		case 4:
-		button_Array = {'*','0','#'}; //row 4
+		//button_Array = {'*','0','#'}; //row 4
+			button_Array [0] = '*';
+			button_Array [1] = '0';
+			button_Array [2] = '#';
 		break;
 		default:
 		break;
-	}
+	} // end switch case
 	
 	_delay_ms(10); // Delay for debouncing/stabilization
 	
@@ -106,7 +120,7 @@ void scan_Row(char row)
 		_delay_ms(100);
 		PORTB = 0b00000010;
 	}
-}
+} //end scan_Row
 
 void scan_Row_One()
 //this function scans row one to detect a key press in any column
