@@ -43,7 +43,13 @@ int main(void)
 
 	while (1)
 	{
-		scan_Keypad();
+		char date_Array [4] = {0}; //initialize date array as empty
+		
+		//fill in date array
+		for (int i = 0; i < 4; i++){
+			scan_Keypad();
+			date_Array[i] = temp;
+		}
 	}
 
 	return 0;
@@ -54,6 +60,7 @@ int main(void)
 void scan_Row(char row)
 //this function scans the specified row and stores the detected number in a temp variable
 {
+	
 	char button_Array [3] = {'0','0','0'};
 		 //initialize array to store numbers of current row of buttons
 	
@@ -62,6 +69,7 @@ void scan_Row(char row)
 		case 1:
 		//button_Array = {'1','2','3'}; //row 1
 			button_Array [0] = '1';
+			temp = button_Array [0];
 			button_Array [1] = '2';
 			button_Array [2] = '3';
 		break;
@@ -86,6 +94,8 @@ void scan_Row(char row)
 		default:
 		break;
 	} // end switch case
+	
+	
 	
 	_delay_ms(10); // Delay for debouncing/stabilization
 	
