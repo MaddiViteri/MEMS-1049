@@ -1,0 +1,36 @@
+#include <avr/io.h>
+#define F_CPU 16000000UL  // 16 MHz
+#include <util/delay.h>
+
+int main(void)
+{
+    /* Set all PORTC pins as inputs with pull-ups enabled */
+    DDRC = 0x00;  // All pins of PORTC are inputs
+    PORTC = 0xFF; // Enable pull-ups on PORTC
+
+    /* Set PD7 as an output */
+    DDRD |= (1 << PD7); // PD7 as output
+    PORTD |= (1 << PD7); // Initially high
+
+    while (1)
+    {
+        /* Drive PD7 (row 1) low */
+        PORTD &= ~(1 << PD7); // Set PD7 to low
+        
+        _delay_ms(10); // Delay for debouncing/stabilization
+        
+        /* Check if any button in row 1 is pressed */
+        if (!(PINC & (1 << PC2))) // Check if button in column 3 (PC2) is pressed
+        {
+            _delay_ms(100); // Software debounce
+            // Do something here (e.g., set a flag, light up an LED)
+        }
+
+        /* Reset row 1 to high */
+        PORTD |= (1 << PD7); // Set PD7 back to high
+        
+        _delay_ms(100); // Delay before the next scan to reduce bouncing/effects
+    }
+
+    return 0;
+}
