@@ -1,0 +1,63 @@
+
+#include <avr/io.h>
+#define F_CPU 16000000UL  // 16 MHz
+#include <util/delay.h>
+
+void USARTinit (void);
+void USARTsend (unsigned char ch);
+
+unsigned char ch;
+
+int main(void)
+{
+	/* The following set columns as inputs */
+	DDRD &= 0b00000100;		//&= set pin2(PD2) to input mode
+	DDRD &= 0b00001000;		//&= set pin3(PD3) to input mode
+	DDRD &= 0b00010000;		//&= set pin4(PD4) to input mode
+	
+	/* The following set rows as outputs */
+	DDRD |= 0b00100000;		//|= set pin5(PD5) to output mode
+	DDRD |= 0b01000000;		//|= set pin6(PD6) to output mode
+	DDRD |= 0b10000000;		//|= set pin7(PD7) to output mode
+	DDRB |= 0b00000001;		//|= set pin8(PB0) to output mode
+	
+	/* The following enable the pull-up resistors */
+	PORTD |= 0b00000100;	// Enable Internal Pull-Up at PD2
+	PORTD |= 0b00001000;	// Enable Internal Pull-Up at PD3
+	PORTD |= 0b00010000;	// Enable Internal Pull-Up at PD4
+	
+	USARTinit();			// Initialize the USART  
+	
+    while (1) 
+    {
+		PORTB = 0b11111110;	//Set R1 to LOW - scan row 1
+		PORTD = 0b11111111;	//De-active all other bits
+		
+		//if ((PIND & (1<<2)) == 0)
+		if (PIND == 0b11111011)
+		{
+			_delay_ms(100);
+			if (PIND == 0b11111011)
+			{
+				USARTsend ('3');	//Transmit ‘3’ 
+			}
+		}
+    }
+	return 0;
+}
+
+/* -------------------- Functions ------------------------ */
+void USARTinit (void)
+{  UCSR0B = (1<<TXEN0);
+	UCSR0C = (1<< UCSZ01)|(1<<UCSZ00);
+	UBRR0L = 103;
+}
+
+void USARTsend (unsigned char ch)
+{
+	while (!(UCSR0A&(1<<UDRE0)));	//wait until UDR0 is empty
+	{
+		UDR0 = ch;						//transmit ch
+	}
+}
+
