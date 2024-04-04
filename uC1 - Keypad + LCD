@@ -1,3 +1,17 @@
+/*
+ * LCD Display Code.c
+ *
+ * Created: 3/30/2024 11:37:51 AM
+ * Author : mev46
+ */ 
+
+//LCD
+#define F_CPU 16000000
+#include <util/delay.h>
+#include <avr/io.h>
+#include "hd44780.h"
+
+//keypad
 #include <avr/io.h>
 #define F_CPU 16000000UL  // 16 MHz
 #include <util/delay.h>
@@ -13,17 +27,15 @@ void scan_Row_Three();
 void scan_Row_Four();
 void scan_Keypad();
 
-
-/*Main Program Loop*/
 int main(void)
 {
 	/* Set all PORTC pins as inputs with pull-ups enabled */
 	DDRC = 0b00000000;  // All pins of PORTC are inputs
 	PORTC = 0b11111111; // Enable pull-ups on PORTC
 
-	/* Set PB0 (Row 1 - Red Wire) as an output */
-	DDRB |= 0b00000001; // PD7 as output
-	PORTB |= 0b00000001; // Initially high
+	/* Set PD7 (Row 1 - Red Wire) as an output */
+	DDRD |= 0b10000000; // PD7 as output
+	PORTD |= 0b10000000; // Initially high
 	
 	/*Set PC3 (Row 2 - Orange Wire) as an output)*/
 	DDRC |= 0b00001000; //Set PC3 as output
@@ -41,31 +53,38 @@ int main(void)
 	DDRB = 0b00000010; // LED pin to output
 	PORTB = 0b00000010;
 	
-	// initialize display in 4 bit mode
-	HD44780_Init();
+// set up LCD
 
-	HD44780_DisplayClear(); // clear display
+	 // initialize display in 4 bit mode
+	 HD44780_Init();
 
-	HD44780_PositionXY(0, 0); // set starting position
+	 HD44780_DisplayClear(); // clear display
 
-	HD44780_DrawString("Enter date"); // send string to be displayed on first line
+	 HD44780_PositionXY(0, 0); // set starting position
+
+	 HD44780_DrawString("Enter the date: "); // send string to be displayed on first line
+ 
+	 HD44780_PositionXY(0, 1); // move to second line
+ 
+	 HD44780_CursorBlink (); // blink cursor where the user will enter the number of pills
+
+	 //_delay_ms(2000); // wait 2 ms
+	 
+   while (1)
+   {
+	   //char date_Array [4] = {0}; //initialize date array as empty
+	   
+	   //fill in date array
+	   //for (int i = 0; i < 4; i++){
+		   scan_Keypad();
+		  // date_Array[i] = temp;
+	  // }
+   }
+
+   return 0;
+   
+}
 	
-	HD44780_PositionXY(0, 1); // move to second line
-
-	while (1)
-	{
-		//char date_Array [4] = {0}; //initialize date array as empty
-		
-		//fill in date array
-		//for (int i = 0; i < 4; i++){
-			scan_Keypad();
-		//	date_Array[i] = temp;
-		//}
-	}
-
-	return 0;
-} //end main
-
 /*Functions*/
 
 void scan_Row(char row)
@@ -146,13 +165,13 @@ void scan_Row(char row)
 void scan_Row_One()
 //this function scans row one to detect a key press in any column
 {
-	/* Drive PB0 (row 1) low */
-	PORTB &= 0b11111110; // Set PB0 to low
+	/* Drive PD7 (row 1) low */
+	PORTD &= 0b01111111; // Set PD7 to low
 	
 	scan_Row(1);
 
 	/* Reset row 1 to high */
-	PORTB |= 0b00000001; // Set PB0 back to high
+	PORTD |= 0b10000000; // Set PD7 back to high
 	
 	_delay_ms(100); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_One
