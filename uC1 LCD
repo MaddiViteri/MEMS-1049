@@ -1,0 +1,180 @@
+/*
+ * LCD Display Code.c
+ *
+ * Created: 3/28/2024 11:45:47 PM
+ * Author : carol
+ */ 
+
+// LCD Screen Setup:
+	
+	// 1. return home (go to curser at 0,0)
+	// 2. function set (4 bit or 8 bit mode, how many lines of LCD are u using)
+	// 3. display on/off
+	// 4. entry mode set 
+	// 5. clear display
+
+
+
+/*
+#define LCD_RS PD0
+#define LCD_EN PD1
+
+void initialize_LCD();
+void setup_commands(unsigned char command);
+void write_to_LCD(unsigned char data);
+void write_string(char *str);
+void go_to_x_y(unsigned char x, unsigned char y);
+void wait(volatile int multiple);
+
+int main(void)
+{
+
+	DDRD = 0XFF;
+	initialize_LCD();
+	go_to_x_y(0,0);
+	write_string("n");
+    
+}
+
+void wait(volatile int multiple)
+{
+	// creates a delay
+	while (multiple > 0) {
+		TCCR0A = 0x00; // clears WGM
+		TCNT0 = 0; //preload value for testing
+		TCCR0B = 0b00000011;
+		while (TCNT0 < 0xFA);
+		TCCR0B = 0x00; //stop timer0
+		multiple--;
+	}
+} //end wait()
+
+void go_to_x_y(unsigned char x, unsigned char y) // y: line 0 or line 1, x:
+{
+	if(y==0)
+	{
+		setup_commands(0X80 + x);
+	}
+	else if(y==1)
+	{
+		setup_commands(0XC0 + x);
+	}
+	
+}
+void initialize_LCD()
+{
+//commands to define how LCD will work
+	
+	setup_commands(0X02); // return home
+	setup_commands(0X28); // function set (multiple things being set here)
+	setup_commands(0X0C); // display on/off
+	setup_commands(0X06); // entry mode set
+	setup_commands(0X01); // clear screen
+	wait(2000);
+}
+
+void setup_commands(unsigned char command)
+{
+// sending 8 bits of data to 4 bits of the LCD
+	
+		//sending the upper 4 bits of command LCD
+		PORTD = (PORTD & 0X0F) | (command & 0XF0); 
+		PORTD &= ~(1<<LCD_RS); // RS = 0
+		PORTD |= (1<<LCD_EN); // EN = 1
+		wait(2000);
+		PORTD &= ~(1<<LCD_EN); // EN = 0
+		wait(2000);
+	
+		//sending the lower 4 bits of the command to the LCD
+		PORTD = (PORTD & 0X0F) | (command<<4); 
+		PORTD |= (1<<LCD_EN); // EN = 1
+		wait(2000);
+		PORTD &= ~(1<<LCD_EN); // EN = 0
+		wait(2000);
+	}
+
+void write_string(char *str)
+{
+	for(int i=0;str[i]!=0;i++)
+	{
+		write_to_LCD(str[i]);
+	}
+}	
+void write_to_LCD(unsigned char data)
+{
+		//sending the upper 4 bits of command LCD
+		PORTD = (PORTD & 0X0F) | (data & 0XF0);
+		PORTD |= (1<<LCD_RS); // RS = 0
+		PORTD |= (1<<LCD_EN); // EN = 1
+		wait(2000);
+		PORTD &= ~(1<<LCD_EN); // EN = 0
+		wait(2000);
+		
+		//sending the lower 4 bits of the command to the LCD
+		PORTD = (PORTD & 0X0F) | (data<<4);
+		PORTD |= (1<<LCD_EN); // EN = 1
+		wait(2000);
+		PORTD &= ~(1<<LCD_EN); // EN = 0
+		wait(2000);
+}
+
+*/
+#define F_CPU 16000000
+#include <util/delay.h>
+#include <avr/io.h>
+#include "hd44780.h"
+int main(void)
+{
+	
+// prompt 1:
+
+	 // initialize display in 4 bit mode
+	 HD44780_Init();
+
+	 HD44780_DisplayClear(); // clear display
+
+	 HD44780_PositionXY(0, 0); // set starting position
+
+	 HD44780_DrawString("Enter # of times per day"); // send string to be displayed on first line
+ 
+	 HD44780_PositionXY(0, 1); // move to second line
+ 
+	 HD44780_DrawString("pill is taken:"); // send string to be displayed on second line
+ 
+	 HD44780_PositionXY(14, 1); // move cursor to end of second line
+ 
+	 HD44780_CursorBlink (); // blink cursor where the user will enter the number of pills
+
+	 _delay_ms(2000); // wait 2 ms
+   
+ // prompt 2: 
+
+	  HD44780_DisplayClear(); // clear display
+	  
+	  HD44780_PositionXY(0, 0); // set position
+	  
+	  // send string for entering pill time based off how many pills they will take per day
+		for(int i=1;i<3;i++)
+		{
+			char *format_string = "Time 4 pill %d:"; // create first part of first line
+			char buffer[16]; // create array of chars for complete string to be stored (using for memory allocation)
+			sprintf(buffer, format_string, i); // make buffer a string that combines the format string with the i var
+			HD44780_DrawString(buffer); // send first line
+			HD44780_PositionXY(0, 1); // move position to second line
+			HD44780_DrawString("  :  "); // display this for user to enter time
+			HD44780_PositionXY(0,1); // cursor at 1st digit
+			HD44780_CursorBlink (); 
+			_delay_ms(1000);
+			HD44780_PositionXY(1,1); // cursor at 2nd digit
+			HD44780_CursorBlink ();
+			_delay_ms(1000);
+			HD44780_PositionXY(3,1); // cursor at 3rd digit
+			HD44780_CursorBlink ();
+			_delay_ms(1000);
+			HD44780_PositionXY(4,1); // cursor at 4th digit
+			HD44780_CursorBlink ();
+			_delay_ms(1000);
+			HD44780_DisplayClear();
+		}
+}
+	 
