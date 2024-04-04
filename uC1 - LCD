@@ -135,18 +135,21 @@ int main(void)
 
 	 HD44780_PositionXY(0, 0); // set starting position
 
-	 HD44780_DrawString("Enter the date"); // send string to be displayed on first line
+	 HD44780_DrawString("Enter the date: "); // send string to be displayed on first line
  
 	 HD44780_PositionXY(0, 1); // move to second line
- /*
-	 HD44780_DrawString("pill is taken:"); // send string to be displayed on second line
+	 
  
-	 HD44780_PositionXY(14, 1); // move cursor to end of second line
+	 //HD44780_DrawString("pill is taken:"); // send string to be displayed on second line
+ 
+	 //HD44780_PositionXY(14, 1); // move cursor to end of second line
  
 	 HD44780_CursorBlink (); // blink cursor where the user will enter the number of pills
 
 	 _delay_ms(2000); // wait 2 ms
+	 
    
+   /*
  // prompt 2: 
 
 	  HD44780_DisplayClear(); // clear display
