@@ -1,0 +1,35 @@
+/*
+ * LCD Display Code.c
+ *
+ * Created: 3/30/2024 11:37:51 AM
+ * Author : mev46
+ */ 
+
+#define F_CPU 16000000
+#include <util/delay.h>
+#include <avr/io.h>
+#include "hd44780.h"
+int main(void)
+{
+	
+// prompt 1:
+
+	 // initialize display in 4 bit mode
+	 HD44780_Init();
+
+	 HD44780_DisplayClear(); // clear display
+
+	 HD44780_PositionXY(0, 0); // set starting position
+
+	 HD44780_DrawString("Enter the date: "); // send string to be displayed on first line
+ 
+	 HD44780_PositionXY(0, 1); // move to second line
+ 
+	 HD44780_CursorBlink (); // blink cursor where the user will enter the number of pills
+
+	 _delay_ms(2000); // wait 2 ms
+	 
+   
+   
+}
+	 
