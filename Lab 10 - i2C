@@ -72,6 +72,11 @@ int main() {
 	data = i2c_read_data(0);  // read with NO_ACK
 	i2c_stop();
 	
+//MAX7221 Set Up
+send_to_MAX7221(0b00001001,0b00000000); //decode
+send_to_MAX7221(0b00001011,0b00000010); //scan
+send_to_MAX7221(0b00001100,0b00000001); //display on
+	
 	while (1)
 	{
 	//test code
