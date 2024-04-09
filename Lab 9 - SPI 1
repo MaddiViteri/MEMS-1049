@@ -22,7 +22,8 @@ int send_to_MAX7221(unsigned char command, unsigned char data);
 
 int main(void) {
 	//char data_in; // This variable will be used to hold incoming data
-	
+
+//SPI Set Up
 	// setup
 	DDRB = 0b00101100; //	DDRB = 1<<PORTB5 | 1<<PORTB3 | 1<<PORTB2;  // Set pins SCK, MOSI, and SS as output
 
@@ -42,7 +43,7 @@ int main(void) {
 	PORTB |= 0b00000100; //PORTB |= 1 << PORTB2;  // disable Secondary (this clears SBIF flag)
 	*/
 
-	//Set up MAX7221
+//Send to MAX7221
 	send_to_MAX7221(0b00001001,0b00000000); //decode
 	send_to_MAX7221(0b00001011,0b00000010); //scan
 	send_to_MAX7221(0b00001100,0b00000001); //display on
