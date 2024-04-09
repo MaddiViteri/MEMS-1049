@@ -19,6 +19,7 @@
 
 void wait(volatile int multiple, volatile char time_choice);
 void delay_T_msec_timer0(volatile char choice);
+int binary_to_Decimal(int n);
 unsigned char data_to_Temp(char UpperByte, char LowerByte);
 
 //MAX7221 Function Headers
@@ -86,9 +87,12 @@ int main(void) {
 		
 		i2c_start();
 		i2c_read_from_address(0x05);
-		char UpperByte = i2c_read_data(1);
-		char LowerByte = i2c_read_data(0);
+		char UpperByte = i2c_read_data(1); //read with ACK
+		char LowerByte = i2c_read_data(0); //read with NO_ACK
 		i2c_stop();
+		
+		UpperByte = binary_to_Decimal(UpperByte);
+		LowerByte = binary_to_Decimal(LowerByte);
 		
 		//convert temp to celsius
 		char tempurature = data_to_Temp(UpperByte,LowerByte);
@@ -171,6 +175,25 @@ void delay_T_msec_timer0(volatile char choice) {
 	//TIFR0 = 0x1<<TOV0;  // Alternate while loop: Clear TOV0 (note that this is a nonintuitive bit in that it is cleared by writing a 1 to it)
 	
 } // end delay_T_msec_timer0()
+
+int binary_to_Decimal(int n){
+	
+	int num = n;
+	int dec_val = 0;
+	
+	int base = 1;
+	int temp = num;
+	
+	while(temp){
+		int last = temp % 10;
+		
+		dec_val += last * base;
+		
+		base = base * 2;
+	}
+	
+	return dec_val;
+}
 
 unsigned char data_to_Temp(char UpperByte, char LowerByte){
 	
