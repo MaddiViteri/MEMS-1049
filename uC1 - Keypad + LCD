@@ -66,6 +66,8 @@ int main(void)
 
 	HD44780_PositionXY(0, 1); // set starting position
 	
+	HD44780_CursorOff();
+	
 // 	 HD44780_DrawString("_ _/_ _");
 // 	 
 // 	 HD44780_PositionXY(0, 1); // set starting position
