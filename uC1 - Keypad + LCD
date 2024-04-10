@@ -1,131 +1,18 @@
-// #define F_CPU 16000000UL  // 16 MHz for clock
-// 
-// #include <avr/io.h>
-// #include <util/delay.h>
-// 
-// /*Headers*/
-// void wait(volatile int multiple, volatile char time_choice);
-// void delay_T_msec_timer0(volatile char choice);
-// void software_Debounce();
-// void hardware_Debounce();
-// 
-// int main(void)
-// {
-// 	/* Set all PORTC pins as inputs with pull-ups enabled */
-// 	DDRC = 0b00000000;  // All pins of PORTC are inputs
-// 	DDRB = 0b00000010;  // LED pin to output
-// 	PORTC =0b00000111; // Enable pull-ups on PORTC
-// 
-// 	/* Set PD7 as an output */
-// 	DDRD |= 0b10000000; // PD7 as output
-// 	PORTD |= 0b10000000; // Initially high
-// 	PORTB = 0b00000010; //initially off
-// 
-// 	while (1)
-// 	{
-// 		/* Drive PD7 (row 1) low */
-// 		PORTD &= 0b01111111; // Set PD7 to low
-// 
-// 		software_Debounce(); // Delay for debouncing/stabilization
-// 
-// 		/* Check if any button in row 1 is pressed */
-// 		if (!(PIND & 0b00000100)) // Check if button in column 3 (PC2) is pressed
-// 		{
-// 			software_Debounce(); // Software debounce
-// 			//led on for test
-// 			PORTB = 0b00000000; //on
-// 			wait(100,2);
-// 			PORTB = 0b00000010; //off again
-// 		}
-// 
-// 		/* Reset row 1 to high */
-// 		PORTD |= 0b10000000; // Set PD7 back to high
-// 
-// 		hardware_Debounce(); // Delay before the next scan to reduce bouncing/effects
-// 	}
-// 
-// 	return 0;
-// }
-// 
-// /*functions*/
-// 
-// void wait(volatile int multiple, volatile char time_choice) {
-// 	/* This subroutine calls others to create a delay.
-// 		 Total delay = multiple*T, where T is in msec and is the delay created by the called function.
-// 	
-// 		Inputs: multiple = number of multiples to delay, where multiple is the number of times an actual delay loop is called.
-// 		Outputs: None
-// 	*/
-// 	
-// 	//PORTB = 0b00000011; //Turns OFF PB0/1
-// 	
-// 	while (multiple > 0) {
-// 		delay_T_msec_timer0(time_choice); 
-// 		multiple--;
-// 	}
-// } // end wait()
-// 
-// void delay_T_msec_timer0(volatile char choice) {
-//     //*** delay T ms **
-//     /* This subroutine creates a delay of T msec using TIMER0 with prescaler on clock, where, for a 16MHz clock:
-//     		for Choice = 1: T = 0.125 msec for prescaler set to 8 and count of 250 (preload counter with 5)
-//     		for Choice = 2: T = 1 msec for prescaler set to 64 and count of 250 (preload counter with 5)
-//     		for Choice = 3: T = 4 msec for prescaler set to 256 and count of 250 (preload counter with 5)
-//     		for Choice = 4: T = 16 msec for prescaler set to 1,024 and count of 250 (preload counter with 5)
-// 			for Choice = Default: T = .0156 msec for no prescaler and count of 250 (preload counter with 5)
-// 	
-// 			Inputs: None
-// 			Outputs: None
-// 	*/
-// 	
-// 	TCCR0A = 0x00; // clears WGM00 and WGM01 (bits 0 and 1) to ensure Timer/Counter is in normal mode.
-// 	TCNT0 = 0;  // preload value for testing on count = 250
-// 	// preload value for alternate test on while loop: TCNT0 = 5;  // preload load TIMER0  (count must reach 255-5 = 250)
-// 	
-// 	switch ( choice ) { // choose prescaler
-// 		case 1:
-// 			TCCR0B = 0b00000010; //1<<CS01;	TCCR0B = 0x02; // Start TIMER0, Normal mode, crystal clock, prescaler = 8
-// 		break;
-// 		case 2:
-// 			TCCR0B =  0b00000011; //1<<CS01 | 1<<CS00;	TCCR0B = 0x03;  // Start TIMER0, Normal mode, crystal clock, prescaler = 64
-// 		break;
-// 		case 3:
-// 			TCCR0B = 0b00000100; //1<<CS02;	TCCR0B = 0x04; // Start TIMER0, Normal mode, crystal clock, prescaler = 256
-// 		break; 
-// 		case 4:
-// 			TCCR0B = 0b00000101; //1<<CS02 | 1<<CS00; TCCR0B = 0x05; // Start TIMER0, Normal mode, crystal clock, prescaler = 1024
-// 		break;
-// 		default:
-// 			TCCR0B = 0b00000001; //1<<CS00; TCCR0B = 0x01; Start TIMER0, Normal mode, crystal clock, no prescaler
-// 		break;
-// 	}
-// 	
-// 	while (TCNT0 < 0xFA); // exits when count = 250 (requires preload of 0 to make count = 250)
-// 	// alternate test on while loop: while ((TIFR0 & (0x1<<TOV0)) == 0); // wait for TOV0 to roll over:
-// 	// How does this while loop work?? See notes
-// 	
-// 	TCCR0B = 0x00; // Stop TIMER0
-// 	//TIFR0 = 0x1<<TOV0;  // Alternate while loop: Clear TOV0 (note that this is a nonintuitive bit in that it is cleared by writing a 1 to it)
-// 	
-// } // end delay_T_msec_timer0()
-// 
-// void software_Debounce(){
-// 	wait(10,2);
-// }
-// 
-// void hardware_Debounce(){
-// 	wait(50,2);
-// }
-
-#include <avr/io.h>
 #define F_CPU 16000000UL  // 16 MHz
+
+//General
+#include <avr/io.h>
 #include <util/delay.h>
+
+//LCD Screen
 #include "hd44780.h"
 
 /*Global Variables*/
 char temp = 'h';
+int is_Pressed = 0;
 
 /*Headers*/
+//Keypad
 void scan_Row(char row);
 void scan_Row_One();
 void scan_Row_Two();
@@ -137,6 +24,7 @@ void scan_Keypad();
 /*Main Program Loop*/
 int main(void)
 {
+//Set Up Keypad
 	/* Set all PORTC pins as inputs with pull-ups enabled */
 	DDRC = 0b00000000;  // All pins of PORTC are inputs
 	PORTC = 0b11111111; // Enable pull-ups on PORTC
@@ -161,6 +49,7 @@ int main(void)
 	DDRB = 0b00000110; // LED pin to output PB2 to output
 	PORTB = 0b00000110; //initially high and LED initially off
 
+//Set up LCD
 	// initialize display in 4 bit mode
 	 HD44780_Init();
 
@@ -173,8 +62,6 @@ int main(void)
 	while (1)
 	{
 		scan_Keypad();
-		HD44780_DrawChar(temp);
-		
 	}
 
 	return 0;
@@ -226,6 +113,9 @@ void scan_Row(char row)
 	
 	//_delay_ms(10); // Delay for debouncing/stabilization
 	
+	
+	
+	
 	/* Check if any button in row 1 is pressed */
 	// Check if button in column 1 (PC0) is pressed
 	if (!(PINC & 0b00000001))
@@ -235,9 +125,8 @@ void scan_Row(char row)
 		PORTB = 0b00000000;
 		temp = button_Array[0];
 		_delay_ms(10);
-		PORTB = 0b00000010;
-		//pressed=true
-		
+		PORTB = 0b00000010;	
+		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 2 (PC1) is pressed
 	else if (!(PINC & 0b00000010))
@@ -248,6 +137,7 @@ void scan_Row(char row)
 		temp = button_Array[1];
 		_delay_ms(10);
 		PORTB = 0b00000010;
+		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 3 (PC2) is pressed
 	else if (!(PINC & 0b00000100))
@@ -258,7 +148,9 @@ void scan_Row(char row)
 		temp =button_Array[2];
 		_delay_ms(10);
 		PORTB = 0b00000010;
+		is_Pressed = 1;// Button is pressed
 	}
+	
 } //end scan_Row
 
 void scan_Row_One()
@@ -325,9 +217,14 @@ void scan_Keypad()
 	scan_Row_Three();
 	scan_Row_Four();
 	
-// 	if pressed:
-// 		change disp
-// 		pressed = false
+	//if NOT pressed
+	if(is_Pressed == 0){
+		//do nothing
+	} else {
+		//reset pressed
+		is_Pressed = 0;
+		HD44780_DrawChar(temp);
+	}
 	
 } //end of scan_Keypad
 
