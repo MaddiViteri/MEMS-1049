@@ -1,6 +1,7 @@
 #define F_CPU 16000000UL  // 16 MHz
 
 //General
+#include <stdio.h>
 #include <avr/io.h>
 #include <util/delay.h>
 
@@ -10,6 +11,8 @@
 /*Global Variables*/
 char temp = 'h';
 int is_Pressed = 0;
+char date [6] = {'0','0', '/','0','0','\0'};
+int date_Index = 0;
 
 /*Headers*/
 //Keypad
@@ -58,11 +61,22 @@ int main(void)
 	 HD44780_PositionXY(0, 0); // set starting position
 	 
 	 HD44780_CursorBlink (); // blink cursor 
+	 
+	HD44780_DrawString("Enter the date: "); // send string to be displayed on first line
 
+	HD44780_PositionXY(0, 1); // set starting position
+	
+// 	 HD44780_DrawString("_ _/_ _");
+// 	 
+// 	 HD44780_PositionXY(0, 1); // set starting position
+	
 	while (1)
 	{
 		scan_Keypad();
+		
 	}
+
+	//HD44780_DrawString(date);
 
 	return 0;
 } //end main
@@ -222,8 +236,39 @@ void scan_Keypad()
 		//do nothing
 	} else {
 		//reset pressed
+		if(temp == '#'){
+			//send to thing
+			char month [2] = {date[0],date[1]};
+			char day [2] = {date[3], date[4]};
+			
+			//clear display
+			date[0] = '0'; date[1] = '0'; date[3] = '0'; date[4] = '0';
+			
+			HD44780_DrawString(date);
+			HD44780_PositionXY(0, 1); // set starting position
+			
+			date_Index = 0;
+			
+			is_Pressed = 0;
+			
+			return;
+		}
+		
 		is_Pressed = 0;
-		HD44780_DrawChar(temp);
+		date[date_Index] = temp;
+		date_Index ++;
+		
+		if(date_Index == 2){
+			date_Index++;
+		}
+		
+		if(date_Index % 5 == 0){
+			date_Index = 0;
+		}
+		
+		HD44780_DrawString(date);
+		HD44780_PositionXY(0, 1); // set starting position
+		
 	}
 	
 } //end of scan_Keypad
