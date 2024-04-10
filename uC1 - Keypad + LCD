@@ -5,26 +5,26 @@
  * Author : mev46
  */ 
 
+#define F_CPU 16000000UL  // 16 MHz
+
 //LCD
-#define F_CPU 16000000
-#include <util/delay.h>
-#include <avr/io.h>
 #include "hd44780.h"
 #include <stdio.h>
 
 //keypad
 #include <avr/io.h>
-#define F_CPU 16000000UL  // 16 MHz
 #include <util/delay.h>
 
 /*Global Variables*/
-char maddi = -49;
+volatile char temp;
 
 /*Headers*/
 void wait(volatile int multiple, volatile char time_choice);
 void delay_T_msec_timer0(volatile char choice);
 void software_Debounce();
 void hardware_Debounce();
+
+//Keypad
 void scan_Row(char row);
 void scan_Row_One();
 void scan_Row_Two();
@@ -67,42 +67,29 @@ int main(void)
 
 	 HD44780_PositionXY(0, 0); // set starting position
 
-	 HD44780_DrawString("Enter the date: "); // send string to be displayed on first line
+	 HD44780_DrawString("Key Pressed: "); // send string to be displayed on first line
+	 
+	 //HD44780_PositionXY(0, 0); // set starting position
  
 	 HD44780_PositionXY(0, 1); // move to second line colmn 0, row 2
  
 	 HD44780_CursorBlink (); // blink cursor where the user will enter the number of pills
 	 
-	 char *empty_Date = "    /    ";
-	 
-	 HD44780_DrawString(empty_Date);
-	 
-	 HD44780_PositionXY(0, 1); // move to second line
- 
-	 char date_Array [4] = {0, 0, 0, 0}; //initialize date array as empty
-		   
-	 char buffer[16]; // create array of chars for complete string to be stored (using for memory allocation)
-	 
-	 char *format_string = "%d %d / %d %d"; // create first part of first line
-	   
-	   //fill in date array
-	   for (int i = 0; i <= 4; i++)
-		{
-		   scan_Keypad();
-		   date_Array[i] = maddi;
-		   
-		   sprintf(buffer, format_string, date_Array[0], date_Array[1], date_Array[2], date_Array[3]); // make buffer a string that combines the format string with the i var
-		   
-		   HD44780_DrawString(buffer);
-		   
-		    HD44780_PositionXY(0, 1); // move to second line
-		   
-		  // HD44780_PositionXY(i, 0); // move to second line
-		}//end for
-		
-		HD44780_DisplayClear(); // clear display
-		HD44780_DrawString("end program");
+	 while(1){
+		 /* Drive PD7 (row 1) low */
+		 PORTD &= 0b01111111; // Set PD7 to low
+		 
+		 scan_Row(1);
 
+		 /* Reset row 1 to high */
+		 PORTD |= 0b10000000; // Set PD7 back to high
+		 
+		 software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+		 
+		 HD44780_DrawChar(temp);
+		 
+	 }//end while
+	 
    return 0;
    
 }
@@ -180,7 +167,6 @@ void hardware_Debounce(){
 void scan_Row(char row)
 //this function scans the specified row and stores the detected number in a temp variable
 {
-	
 	char button_Array [3] = {'0','0','0'};
 	//initialize array to store numbers of current row of buttons
 	
@@ -189,7 +175,6 @@ void scan_Row(char row)
 		case 1:
 		//button_Array = {'1','2','3'}; //row 1
 		button_Array [0] = '1';
-		maddi = button_Array [0];
 		button_Array [1] = '2';
 		button_Array [2] = '3';
 		break;
@@ -215,18 +200,16 @@ void scan_Row(char row)
 		break;
 	} // end switch case
 	
-	
-	
 	wait(10,2); // Delay for debouncing/stabilization
 	
-	/* Check if any button in row 1 is pressed */
+	/* Check if any button in the choosen is pressed */
 	// Check if button in column 1 (PC0) is pressed
 	if (!(PINC & 0b00000001))
 	{
 		software_Debounce(); // Software debounce
 		// Do something specific for button in row 1, column 1
 		PORTB = 0b00000000;
-		maddi = button_Array[0];
+		temp = button_Array[0];
 		hardware_Debounce();
 		PORTB = 0b00000010;
 	}
@@ -236,7 +219,7 @@ void scan_Row(char row)
 		software_Debounce(); // Software debounce
 		// Do something specific for button in row 1, column 2
 		PORTB = 0b00000000;
-		maddi = button_Array[1];
+		temp = button_Array[1];
 		hardware_Debounce();
 		PORTB = 0b00000010;
 	}
@@ -246,16 +229,18 @@ void scan_Row(char row)
 		software_Debounce(); // Software debounce
 		// Do something specific for button in row 1, column 3
 		PORTB = 0b00000000;
-		maddi =button_Array[2];
+		temp =button_Array[2];
 		hardware_Debounce();
 		PORTB = 0b00000010;
 	}
+	
+	
 } //end scan_Row
 
 void scan_Row_One()
 //this function scans row one to detect a key press in any column
 {
-	/* Drive PD7 (row 1) low */
+	/* Drive PD7 (row 1 RED) low */
 	PORTD &= 0b01111111; // Set PD7 to low
 	
 	scan_Row(1);
@@ -269,7 +254,7 @@ void scan_Row_One()
 void scan_Row_Two()
 //this function scans row two to detect a key press in any column
 {
-	/* Drive PC3 (row 2) low */
+	/* Drive PC3 (row 2 ORANGE) low */
 	PORTC &= 0b11110111; // Set PC3 to low
 	
 	scan_Row(2);
@@ -283,7 +268,7 @@ void scan_Row_Two()
 void scan_Row_Three()
 //this function scans row two to detect a key press in any column
 {
-	/* Drive PC4 (row 3) low */
+	/* Drive PC4 (row 3 YELLOW) low */
 	PORTC &= 0b11101111; // Set PC4 to low
 	
 	scan_Row(3);
@@ -297,7 +282,7 @@ void scan_Row_Three()
 void scan_Row_Four()
 //this function scans row two to detect a key press in any column
 {
-	/* Drive PC5 (row 4) low */
+	/* Drive PC5 (row 4 GREEN) low */
 	PORTC &= 0b11011111; // Set PC5 to low
 	
 	scan_Row(4);
