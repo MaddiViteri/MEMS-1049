@@ -1,120 +1,100 @@
 /*
- * Lab 10
+ * LCD Display Code.c
  *
- * Created: 04/09/2024
- * Author: Maddi Viteri
- 
-   This program sets up SPI in Main mode, mode 0, with SCK frequency of Fosc/16.
-   Then the letter 'R' is transmitted.
-   Whatever data that is received from Secondary is displayed on PortD
- ;
- 
+ * Created: 3/30/2024 11:37:51 AM
+ * Author : mev46
  */ 
 
+#define F_CPU 16000000UL  // 16 MHz
+
+//LCD
+#include <util/delay.h>
 #include <avr/io.h>
-#include <stdlib.h>
+#include "hd44780.h"
 #include <stdio.h>
 
-/** Function Declarations *********************************************/
+//keypad
+#include <avr/io.h>
+#include <util/delay.h>
 
+/*Global Variables*/
+volatile char temp;
+
+/*Headers*/
 void wait(volatile int multiple, volatile char time_choice);
 void delay_T_msec_timer0(volatile char choice);
-int binary_to_Decimal(int n);
-unsigned char data_to_Temp(char UpperByte, char LowerByte);
+void software_Debounce();
+void hardware_Debounce();
+void scan_Row(char row);
+void scan_Row_One();
+void scan_Row_Two();
+void scan_Row_Three();
+void scan_Row_Four();
+void scan_Keypad();
 
-//MAX7221 Function Headers
-int send_to_MAX7221(unsigned char command, unsigned char data);
-void write_number_to_MAX7221(char command, char number_displayed);
+int main(void)
+{
+	/* Set all PORTC pins as inputs with pull-ups enabled */
+	DDRC = 0b00000000;  // All pins of PORTC are inputs
+	PORTC = 0b11111111; // Enable pull-ups on PORTC
 
-//MCP9808 Function Headers
-void i2c_init(void);
-void i2c_start(void);
-void i2c_stop(void);
-void i2c_repeated_start(void);
-void i2c_write_to_address(unsigned char address);
-void i2c_read_from_address(unsigned char address);
-void i2c_write_data(unsigned char data);
-unsigned char i2c_read_data(unsigned char ack);
-
-int main(void) {
-
-//SPI Set Up
-	// setup
-	DDRB = 0b00101100; //	DDRB = 1<<PORTB5 | 1<<PORTB3 | 1<<PORTB2;  // Set pins SCK, MOSI, and SS as output
-
-	// Set up Main SPI
-	SPCR = 0b01010001; // SPCR = 1<<SPE | 1<<MSTR | 1<<SPR0; // (SPIE = 0, SPE = 1, DORD = 0, MSTR = 1, CPOL = 0, CPHA = 0, SPR1 = 0, SPR0 = 1)
-		// enable the SPI, set to Main mode 0, SCK = Fosc/16, lead with MSB
-
-//MAX7221 Set Up
-	send_to_MAX7221(0b00001001,0b00000000); //decode
-	send_to_MAX7221(0b00001011,0b00000010); //scan
-	send_to_MAX7221(0b00001100,0b00000001); //display on
+	/* Set PD7 (Row 1 - Red Wire) as an output */
+	DDRD |= 0b10000000; // PD7 as output
+	PORTD |= 0b10000000; // Initially high
 	
+	/*Set PC3 (Row 2 - Orange Wire) as an output)*/
+	DDRC |= 0b00001000; //Set PC3 as output
+	PORTC |= 0b00001000; //Initially high
 	
-//MCP9808 Set Up
+	/*Set PC4 (Row 3 - Yellow Wire) as an output)*/
+	DDRC |= 0b00010000; // Set PC4 as output
+	PORTC |= 0b00010000; //Initially high
+	
+	/*Set PC5 (Row 4 - Green Wire) as an output)*/
+	DDRC |= 0b00100000; // Set PC5 as output
+	PORTC |= 0b00100000; //Initially high
 
-	// I2C (TWI) Setup
-	//If needed, turn on TWI power: PRR = PRR & 0b01111111; // Ensure that TWI is powered on (PRTWI = 0)
-	DDRC = 0b00000000; // Define all PORTC bits as input (specifically PC4 and PC5)
-	PORTC = PORTB | 0b00110000;  // set internal pull-up resistors on SCL and SDA lines (PC5 and PC4) ofr I2C bus
-	i2c_init();
+	/*Set up LED*/
+	DDRB = 0b00000010; // LED pin to output
+	PORTB = 0b00000010;
+	
+// set up LCD
 
-	// I2C Write data as Main
-	i2c_start();
-	i2c_write_to_address(0x08);  // Address 0x08 for Resolution Register Address
-	i2c_write_data(0b00000001);  //Sets Resolution to 0.25 C
-	i2c_stop();
+	 // initialize display in 4 bit mode
+	 HD44780_Init();
 
-	while(1) //constant refresh 
-	{
-		
-		/*
-		//Test Code - Any time you change anything, try this to see if it's unaffected
-			//month
-			write_number_to_MAX7221(0b00000001,0); //dig 0 to 0
-			write_number_to_MAX7221(0b00000010,4); //dig 1 t0 4
-			wait(1000,2);
-			//day
-			write_number_to_MAX7221(0b00000001,0); //dig 0 to 0
-			write_number_to_MAX7221(0b00000010,9); //dig 1 t0 3
-			wait(1000,2);
-			//delay
-			send_to_MAX7221(0b00000001,0b00000000); //dig 0 to blank
-			send_to_MAX7221(0b00000010,0b00000000); //dig 1 to blank
-			wait(2000,2); */
-		
-		
-		i2c_start();
-		i2c_read_from_address(0x05);
-		char UpperByte = i2c_read_data(1); //read with ACK
-		char LowerByte = i2c_read_data(0); //read with NO_ACK
-		i2c_stop();
-		
-		UpperByte = binary_to_Decimal(UpperByte);
-		LowerByte = binary_to_Decimal(LowerByte);
-		
-		//convert temp to celsius
-		char tempurature = data_to_Temp(UpperByte,LowerByte);
-		
-		//convert to fahrenheit
-		tempurature = (tempurature-32)*(5/9);
-		
-		//get first digit
-		char dg0 = tempurature / 10;
-		//get second digit
-		char dg1 = tempurature % 10;
-		
-		//send numbers
-		write_number_to_MAX7221(0b00000001,dg0);
-		write_number_to_MAX7221(0b00000010,dg1);
-		
-		
-	} //end constant refresh 
+	 HD44780_DisplayClear(); // clear display
 
+	 HD44780_PositionXY(0, 0); // set starting position
+
+	 HD44780_DrawString("Key Pressed: "); // send string to be displayed on first line
+	 
+	 //HD44780_PositionXY(0, 0); // set starting position
+ 
+	 HD44780_PositionXY(0, 1); // move to second line colmn 0, row 2
+ 
+	 HD44780_CursorBlink (); // blink cursor where the user will enter the number of pills
+	 
+	 while(1){
+		 /* Drive PD7 (row 1) low */
+		 PORTD &= 0b01111111; // Set PD7 to low
+		 
+		 scan_Row(1);
+
+		 /* Reset row 1 to high */
+		 PORTD |= 0b10000000; // Set PD7 back to high
+		 
+		 software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+		 
+		 HD44780_DrawString((char*)&temp);
+		 
+	 }//end while
+	 
+   return 0;
+   
 }
-
-/** Function Definitions *********************************************/
+	
+/*Functions*/
 
 void wait(volatile int multiple, volatile char time_choice) {
 	/* This subroutine calls others to create a delay.
@@ -126,7 +106,7 @@ void wait(volatile int multiple, volatile char time_choice) {
 	
 	//PORTB = 0b00000011; //Turns OFF PB0/1
 	
-	while(multiple > 0) {
+	while (multiple > 0) {
 		delay_T_msec_timer0(time_choice); 
 		multiple--;
 	}
@@ -176,171 +156,148 @@ void delay_T_msec_timer0(volatile char choice) {
 	
 } // end delay_T_msec_timer0()
 
-int binary_to_Decimal(int n){
-	
-	int num = n;
-	int dec_val = 0;
-	
-	int base = 1;
-	int temp = num;
-	
-	while(temp){
-		int last = temp % 10;
-		
-		dec_val += last * base;
-		
-		base = base * 2;
-	}
-	
-	return dec_val;
+void software_Debounce(){
+	wait(100,2);
 }
 
-unsigned char data_to_Temp(char UpperByte, char LowerByte){
-	
-	char temp;
-	
-	UpperByte = UpperByte & 0x1F;
-	if ((UpperByte & 0x10) == 0x10){
-			UpperByte = UpperByte & 0x0F;
-			temp = 256 - (UpperByte*16 + LowerByte/16);
-	} else {
-		temp = (UpperByte*16 + LowerByte/16);
-	}
-	
-	return temp;
+void hardware_Debounce(){
+	wait(50,2);
 }
 
-//MAX7221 Function Definitions
-
-int send_to_MAX7221(unsigned char command, unsigned char data_out)
+void scan_Row(char row)
+//this function scans the specified row and stores the detected number in a temp variable
 {
-	PORTB = PORTB & 0b11111011; //CLear PB2, which is the SS bit so that transmission can begin
-
-	SPDR = command; // Send command
-	while(!(SPSR & (1<<SPIF))); // Wait for transmission to finish
-
-	SPDR = data_out; // Send data
-	while(!(SPSR & (1<<SPIF))); // Wait for transmission to finish
-
-	PORTB = PORTB | 0b00000100; //Return PB2 to 1, which is the SS bit, to end transmission
-
-return 0;
-} // end sent_to_MAX7221
-
-void write_number_to_MAX7221(char command, char number_displayed){
+	char button_Array [3] = {'0','0','0'};
+	//initialize array to store numbers of current row of buttons
 	
-	switch (number_displayed)
+	switch (row)
 	{
-		case 0:
-			number_displayed = 0b01111110;
-		break;
-			case 1:
-			number_displayed = 0B00110000;
+		case 1:
+		//button_Array = {'1','2','3'}; //row 1
+		button_Array [0] = '1';
+		button_Array [1] = '2';
+		button_Array [2] = '3';
 		break;
 		case 2:
-			number_displayed = 0B01101101;
+		//button_Array = {'4','5','6'}; //row 2
+		button_Array [0] = '4';
+		button_Array [1] = '5';
+		button_Array [2] = '6';
 		break;
 		case 3:
-			number_displayed = 0b01111001;
+		//button_Array = {'7','8','9'}; //row 3
+		button_Array [0] = '7';
+		button_Array [1] = '8';
+		button_Array [2] = '9';
 		break;
 		case 4:
-			number_displayed = 0b00110011;
-		break;
-		case 5:
-			number_displayed = 0b01011011;
-		break;
-		case 6:
-			number_displayed = 0b01011111;
-		break;
-		case 7:
-			number_displayed = 0b01110000;
-		break;
-		case 8:
-			number_displayed = 0b01111111;
-		break;
-		case 9:
-			number_displayed = 0b01110011;
+		//button_Array = {'*','0','#'}; //row 4
+		button_Array [0] = '*';
+		button_Array [1] = '0';
+		button_Array [2] = '#';
 		break;
 		default:
 		break;
-	}//end switch
-		
-		send_to_MAX7221(command,number_displayed);
+	} // end switch case
 	
-}
+	wait(10,2); // Delay for debouncing/stabilization
+	
+	/* Check if any button in the choosen is pressed */
+	// Check if button in column 1 (PC0) is pressed
+	if (!(PINC & 0b00000001))
+	{
+		software_Debounce(); // Software debounce
+		// Do something specific for button in row 1, column 1
+		PORTB = 0b00000000;
+		temp = button_Array[0];
+		hardware_Debounce();
+		PORTB = 0b00000010;
+	}
+	// Check if button in column 2 (PC1) is pressed
+	else if (!(PINC & 0b00000010))
+	{
+		software_Debounce(); // Software debounce
+		// Do something specific for button in row 1, column 2
+		PORTB = 0b00000000;
+		temp = button_Array[1];
+		hardware_Debounce();
+		PORTB = 0b00000010;
+	}
+	// Check if button in column 3 (PC2) is pressed
+	else if (!(PINC & 0b00000100))
+	{
+		software_Debounce(); // Software debounce
+		// Do something specific for button in row 1, column 3
+		PORTB = 0b00000000;
+		temp =button_Array[2];
+		hardware_Debounce();
+		PORTB = 0b00000010;
+	}
+	
+	
+} //end scan_Row
 
-//make switch case for different numbers cause decoding is stupid
+void scan_Row_One()
+//this function scans row one to detect a key press in any column
+{
+	/* Drive PD7 (row 1 RED) low */
+	PORTD &= 0b01111111; // Set PD7 to low
+	
+	scan_Row(1);
 
-//MCP9808 Function Definitions
-// From Clark: Note that for coding efficiencies, some of the following functions can be combined, for example to write to or read from an secondary using a single function call.
-// This would eliminate the need for some of the while(test TWINT bit) loops that occur back-to-back when subsequent functions are called.
+	/* Reset row 1 to high */
+	PORTD |= 0b10000000; // Set PD7 back to high
+	
+	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+}// end scan_Row_One
 
-void i2c_init(void) { // initialize i2c
-	TWSR = 0b00000000; // prescaler is set to 1
-	TWBR = 72; // Put 72 into TWBR to define SCL frequency as 100kHz for 16MHz oscillator
-	TWCR = 0b00000100; // TWEN = 1 (enable TWI)
-}
+void scan_Row_Two()
+//this function scans row two to detect a key press in any column
+{
+	/* Drive PC3 (row 2 ORANGE) low */
+	PORTC &= 0b11110111; // Set PC3 to low
+	
+	scan_Row(2);
 
-void i2c_start(void) { // send start command
-	//while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000));   // wait for idle condition -- TWINT bit must be high to proceed -- not needed if single main is used
-	TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);  //TWCR | 0b10100100;       // initiate START condition -- write 1 to TWINT to clear it and initiate action, set TWSTA bit, set TWEN bit
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000));   // wait for action to finish (poll TWINT bit)
-	// if ((TWSR & 0xF8) != START) // error checking -- need to predefine START = 0x08 and ERROR() function.
-	// ERROR();
-}
+	/* Reset row 2 to high */
+	PORTC |= 0b00001000; // Set PC3 back to high
+	
+	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+}// end scan_Row_Two
 
-void i2c_stop(void) { // send stop command
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for action to finish (poll TWINT bit)
-	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO); //TWCR = TWCR | 0b10010100;       // initiate STOP condition -- write 1 to TWINT to clear it and initiate action, set TWSTO bit and set TWEN bit
-}
+void scan_Row_Three()
+//this function scans row two to detect a key press in any column
+{
+	/* Drive PC4 (row 3 YELLOW) low */
+	PORTC &= 0b11101111; // Set PC4 to low
+	
+	scan_Row(3);
 
-void i2c_repeated_start(void) {
-	TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);  //TWCR | 0b10100100;       // initiate START condition -- write 1 to TWINT to clear it and initiate action, set TWSTA bit, set TWEN bit
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000));   // wait for action to finish (poll TWINT bit)
-	// if ((TWSR & 0xF8) != START) // error checking -- need to predefine START = 0x10 and ERROR() function.
-	// ERROR();
-}
+	/* Reset row 3 to high */
+	PORTC |= 0b00010000; // Set PC4 back to high
+	
+	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+}// end scan_Row_Three
 
-void i2c_write_to_address( unsigned char address) { //Write an address byte to the I2C2 bus in form of SLA_W (address to write to)
-	unsigned char SLA_W = address<<1; // create SLA_W byte by shifting address and leaving R/W bit clear
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for idle condition -- TWINT bit must be high to proceed
-	TWDR = SLA_W;       // Load TWDR with address plus R/W bit
-	TWCR = (1<<TWINT) | (1<<TWEN); //TWCR = TWCR | 0b10000100;       // initiate Write -- write 1 to TWINT to clear it and initiate action, and set TWEN
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for action to finish (poll TWINT bit)
-	// if ((TWSR & 0xF8) != MT_SLA_ACK) // error checking -- need to predefine MT_SLA_ACK and ERROR() function depending on possible outcomes: 0x18, 0x20, or 0x38.
-	//ERROR();
-}
+void scan_Row_Four()
+//this function scans row two to detect a key press in any column
+{
+	/* Drive PC5 (row 4 GREEN) low */
+	PORTC &= 0b11011111; // Set PC5 to low
+	
+	scan_Row(4);
 
-void i2c_read_from_address(unsigned char address) { //Write an address byte to the I2C bus in form of SLA_R (address to read from)
-	unsigned char SLA_R = address<<1 | 1; // create SLA_R byte by shifting address and setting R/W bit
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for idle condition -- TWINT bit must be high to proceed
-	TWDR = SLA_R;       // Load TWDR with address plus R/W bit
-	TWCR = (1<<TWINT) | (1<<TWEN); //TWCR = TWCR | 0b10000100;       // initiate Write -- write 1 to TWINT to clear it and initiate action, and set TWEN
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for action to finish (poll TWINT bit)
-	// if ((TWSR & 0xF8) != MR_SLA_ACK) // error checking -- need to predefine MR_SLA_ACK and ERROR() function depending on possible outcomes: 0x38, 0x40, or 0x48.
-	//ERROR();
-}
+	/* Reset row 4 to high */
+	PORTC |= 0b00100000; // Set PC5 back to high
+	
+	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+}// end scan_Row_Four
 
-void i2c_write_data( unsigned char data) { //Write data byte to the I2C2 bus
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for idle condition -- TWINT bit must be high to proceed
-	TWDR = data;       // Load TWDR with data to be sent
-	TWCR = (1<<TWINT) | (1<<TWEN); //TWCR = TWCR | 0b10000100;       // initiate Write -- write 1 to TWINT to clear it and initiate action, and set TWEN
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for action to finish (poll TWINT bit)
-	// if ((TWSR & 0xF8) != MT_DATA_ACK) // error checking -- need to predefine MT_DATA_ACK and ERROR() function depending on possible outcomes: 0x28 or 0x30.
-	//ERROR();
-}
-
-unsigned char i2c_read_data(unsigned char ACK) { //Read a byte of data from a secondary on the I2C2 bus
-	unsigned char data;
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for idle condition -- TWINT bit must be high to proceed
-	if (ACK) // check for whether ACK or NO_ACK should be sent upon receipt of byte from secondary
-	TWCR = (1<<TWINT) | (1<<TWEA) | (1<<TWEN); //TWCR = TWCR | 0b11000100;       // initiate Read with ACK -- write 1 to TWINT to clear it and initiate action, and set TWEA and TWEN
-	else
-	TWCR = (1<<TWINT) | (1<<TWEN); //TWCR = TWCR | 0b10000100;       // initiate Read with NO_ACK-- write 1 to TWINT to clear it and initiate action, and set TWEN
-	while (!(TWCR & (1<<TWINT))); //while (!(TWCR & 0b10000000)) ;  // wait for action to finish (poll TWINT bit)
-	// if ((TWSR & 0xF8) != MR_SLA_ACK) // error checking -- need to predefine MR_SLA_ACK and ERROR() function depending on possible outcomes: 0x50 or 0x58.
-	//ERROR();
-	//If multiple bytes are to be read, this function can be repeated with proper ACK or NO_ACK until done.
-	data = TWDR;  // read the received data from secondary
-	return(data);
-}
+void scan_Keypad()
+//this function scans all rows and all columns of the keypad
+{
+	scan_Row_One();
+	scan_Row_Two();
+	scan_Row_Three();
+	scan_Row_Four();
+} //end of scan_Keypad
