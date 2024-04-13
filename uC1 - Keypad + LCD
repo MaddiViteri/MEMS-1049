@@ -32,9 +32,9 @@ int main(void)
 	DDRC = 0b00000000;  // All pins of PORTC are inputs
 	PORTC = 0b11111111; // Enable pull-ups on PORTC
 
-	/* Set PD7 (Row 1 - Red Wire) as an output */ //MOVED TO PB2
-	//DDRD |= 0b10000000; // PD7 as output
-	//PORTD |= 0b10000000; // Initially high
+	/* Set (Row 1 - Red Wire) as an output */ //MOVED TO PB0
+	DDRB |= 0b00000001; // PB0 as output
+	PORTB |= 0b00000001; // Initially high
 	
 	/*Set PC3 (Row 2 - Orange Wire) as an output)*/
 	DDRC |= 0b00001000; //Set PC3 as output
@@ -48,29 +48,29 @@ int main(void)
 	DDRC |= 0b00100000; // Set PC5 as output
 	PORTC |= 0b00100000; //Initially high
 
-	/*Set up LED*/
-	DDRB = 0b00000110; // LED pin to output PB2 to output
-	PORTB = 0b00000110; //initially high and LED initially off
+// 	/*Set up LED*/
+// 	DDRB = 0b00000001; // LED pin to output PB2 to output
+// 	PORTB = 0b00000001; //initially high and LED initially off
 
 //Set up LCD
 	// initialize display in 4 bit mode
-	 HD44780_Init();
+	HD44780_Init();
 
-	 HD44780_DisplayClear(); // clear display
+	HD44780_DisplayClear(); // clear display
 
-	 HD44780_PositionXY(0, 0); // set starting position
-	 
-	 HD44780_CursorBlink (); // blink cursor 
-	 
+	HD44780_PositionXY(0, 0); // set starting position
+	
+	HD44780_CursorBlink (); // blink cursor
+	
 	HD44780_DrawString("Enter the date: "); // send string to be displayed on first line
 
 	HD44780_PositionXY(0, 1); // set starting position
 	
 	HD44780_CursorOff();
 	
-// 	 HD44780_DrawString("_ _/_ _");
-// 	 
-// 	 HD44780_PositionXY(0, 1); // set starting position
+	// 	 HD44780_DrawString("_ _/_ _");
+	//
+	// 	 HD44780_PositionXY(0, 1); // set starting position
 	
 	while (1)
 	{
@@ -90,38 +90,38 @@ void scan_Row(char row)
 {
 	
 	volatile char button_Array [3] = {'0','0','0'};
-		 //initialize array to store numbers of current row of buttons
+	//initialize array to store numbers of current row of buttons
 	
 	switch (row)
 	{
 		case 1:
 		//button_Array = {'1','2','3'}; //row 1
-			button_Array [0] = '1';
-			button_Array [1] = '2';
-			button_Array [2] = '3';
+		button_Array [0] = '1';
+		button_Array [1] = '2';
+		button_Array [2] = '3';
 		break;
 		case 2:
 		//button_Array = {'4','5','6'}; //row 2
-			button_Array [0] = '4';
-			button_Array [1] = '5';
-			button_Array [2] = '6';
+		button_Array [0] = '4';
+		button_Array [1] = '5';
+		button_Array [2] = '6';
 		break;
 		case 3:
 		//button_Array = {'7','8','9'}; //row 3
-			button_Array [0] = '7';
-			button_Array [1] = '8';
-			button_Array [2] = '9';
+		button_Array [0] = '7';
+		button_Array [1] = '8';
+		button_Array [2] = '9';
 		break;
 		case 4:
 		//button_Array = {'*','0','#'}; //row 4
-			button_Array [0] = '*';
-			button_Array [1] = '0';
-			button_Array [2] = '#';
+		button_Array [0] = '*';
+		button_Array [1] = '0';
+		button_Array [2] = '#';
 		break;
 		default:
-			button_Array [0] = 'a';
-			button_Array [1] = 'b';
-			button_Array [2] = 'c';
+		button_Array [0] = 'a';
+		button_Array [1] = 'b';
+		button_Array [2] = 'c';
 		break;
 	} // end switch case
 	
@@ -141,7 +141,7 @@ void scan_Row(char row)
 		PORTB = 0b00000000;
 		temp = button_Array[0];
 		_delay_ms(10);
-		PORTB = 0b00000010;	
+		PORTB = 0b00000010;
 		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 2 (PC1) is pressed
@@ -172,13 +172,13 @@ void scan_Row(char row)
 void scan_Row_One()
 //this function scans row one to detect a key press in any column
 {
-	/* Drive PD7 (row 1) low */
-	PORTB &= 0b11111011; // Set PD7 to low
+	/* Drive PB0 (row 1) low */
+	PORTB &= 0b11111110; // Set PB0 to low
 	
 	scan_Row(1);
 
 	/* Reset row 1 to high */
-	PORTB |= 0b00000100; // Set PD7 back to high
+	PORTB |= 0b00000001; // Set PD7 back to high
 	
 	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_One
@@ -236,7 +236,7 @@ void scan_Keypad()
 	//if NOT pressed
 	if(is_Pressed == 0){
 		//do nothing
-	} else {
+		} else {
 		//reset pressed
 		if(temp == '#'){
 			//send to thing
@@ -274,4 +274,3 @@ void scan_Keypad()
 	}
 	
 } //end of scan_Keypad
-
