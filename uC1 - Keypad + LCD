@@ -49,8 +49,8 @@ int main(void)
 	PORTC |= 0b00100000; //Initially high
 
 // 	/*Set up LED*/
-// 	DDRB = 0b00000001; // LED pin to output PB2 to output
-// 	PORTB = 0b00000001; //initially high and LED initially off
+	DDRB = 0b00100001; // LED pin to output PB2 to output
+	PORTB = 0b00100001; //initially high and LED initially off
 
 //Set up LCD
 	// initialize display in 4 bit mode
@@ -141,7 +141,7 @@ void scan_Row(char row)
 		PORTB = 0b00000000;
 		temp = button_Array[0];
 		_delay_ms(10);
-		PORTB = 0b00000010;
+		PORTB = 0b00100000;
 		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 2 (PC1) is pressed
@@ -152,7 +152,7 @@ void scan_Row(char row)
 		PORTB = 0b00000000;
 		temp = button_Array[1];
 		_delay_ms(10);
-		PORTB = 0b00000010;
+		PORTB = 0b00100000;
 		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 3 (PC2) is pressed
@@ -163,7 +163,7 @@ void scan_Row(char row)
 		PORTB = 0b00000000;
 		temp =button_Array[2];
 		_delay_ms(10);
-		PORTB = 0b00000010;
+		PORTB = 0b00100000;
 		is_Pressed = 1;// Button is pressed
 	}
 	
