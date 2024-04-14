@@ -35,30 +35,30 @@ void scan_Keypad();
 int main(void)
 {
 	//Set Up Keypad
-	/* Set all PORTC pins as inputs with pull-ups enabled */
-	DDRC = 0b00000000;  // All pins of PORTC are inputs
-	PORTC = 0b00000111; // Enable pull-ups on PORTC
-	
-	/* Set Pb0 (Row 1 - Red Wire) as an output */ //MOVED TO PB0
-	DDRB |= 0b00000001; // Pb0 as output
-	PORTB |= 0b00000001; // Initially high
-	
-	/*Set PC3 (Row 2 - Orange Wire) as an output)*/
-	DDRC |= 0b00001000; //Set PC3 as output
-	PORTC |= 0b00001000; //Initially high
-	
-	/*Set PC4 (Row 3 - Yellow Wire) as an output)*/
-	DDRC |= 0b00010000; // Set PC4 as output
-	PORTC |= 0b00010000; //Initially high
-	
-	/*Set PC5 (Row 4 - Green Wire) as an output)*/
-	DDRC |= 0b00100000; // Set PC5 as output
-	PORTC |= 0b00100000; //Initially high
-	
-	/*Set up LED*/
-	DDRB |= 0b00010000; // LED pin to output PB2 to output
-	PORTB |= 0b00000000; //off
-	PORTB |= 0b00010000; //initially high and LED initially off
+// 	/* Set all PORTC pins as inputs with pull-ups enabled */
+// 	DDRC = 0b00000000;  // All pins of PORTC are inputs
+// 	PORTC = 0b00000111; // Enable pull-ups on PORTC
+// 	
+// 	/* Set Pb0 (Row 1 - Red Wire) as an output */ //MOVED TO PB0
+// 	DDRB |= 0b00000001; // Pb0 as output
+// 	PORTB |= 0b00000001; // Initially high
+// 	
+// 	/*Set PC3 (Row 2 - Orange Wire) as an output)*/
+// 	DDRC |= 0b00001000; //Set PC3 as output
+// 	PORTC |= 0b00001000; //Initially high
+// 	
+// 	/*Set PC4 (Row 3 - Yellow Wire) as an output)*/
+// 	DDRC |= 0b00010000; // Set PC4 as output
+// 	PORTC |= 0b00010000; //Initially high
+// 	
+// 	/*Set PC5 (Row 4 - Green Wire) as an output)*/
+// 	DDRC |= 0b00100000; // Set PC5 as output
+// 	PORTC |= 0b00100000; //Initially high
+// 	
+// 	/*Set up LED*/
+DDRB |= 0b00010010; // LED pin to output PB2 to output
+// 	//PORTB |= 0b00000000; //off
+ 	PORTB |= 0b00000000; //initially high and LED initially off
 	
 	//Set up LCD
 	// initialize display in 4 bit mode
@@ -73,17 +73,13 @@ int main(void)
 	HD44780_PositionXY(0, 1); // set starting position
 
 	HD44780_CursorOff();
-
-	// 	 HD44780_DrawString("_ _/_ _");
-	//
-	// 	 HD44780_PositionXY(0, 1); // set starting position
 	
-	while (1)
-	{
-		scan_Keypad();
-		
-	}
-	//HD44780_DrawString(date);
+// 	while (1)
+// 	{
+// 		scan_Keypad();
+// 		
+// 	}
+	
 	return 0;
 } //end main
 
