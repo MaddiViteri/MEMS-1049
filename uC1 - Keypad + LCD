@@ -1,304 +1,78 @@
-/*
- * Team14_Project_uC1.cpp
- *
- * Created: 3/30/2024 5:09:19 PM
- * Author : cespa
- */ 
-
+#define F_CPU 16000000UL  // 16 MHz
+//General
+#include <stdio.h>
 #include <avr/io.h>
-#include <avr/interrupt.h>
-#include <stddef.h>
-
-#include "hd44780.h" //LCD Screen
-
-// global variables
-int phase_step = 1; // variable to determine which phase of 1-4 the motor is in
-
-int month;
-int day;
-int sun;
-int moon;
-
-/*Global Variables-Keypad and LCD screen*/
+#include <util/delay.h>
+//LCD Screen
+#include "hd44780.h"
+/*Global Variables*/
 char temp = 'h';
 int is_Pressed = 0;
 char date [6] = {'0','0', '/','0','0','\0'};
 int date_Index = 0;
-
-//FUNCTIONS
-
-//wireless
-void initialize_usart(void); // function to set up USART
-void transmit_data_usart(int); // function to transmit a byte by USART
-int receive_data_usart(void); // Function to receive a byte by USART
-void wait(volatile int multiple, volatile char time_choice);
-void delay_T_msec_timer0(char choice);
-int vlookup_moon (uint8_t month, uint8_t day);
-int vlookup_sun (uint8_t month, uint8_t day);
-
 /*Headers*/
 //Keypad
-void software_Debounce();
-void hardware_Debounce();
-
 void scan_Row(char row);
 void scan_Row_One();
 void scan_Row_Two();
 void scan_Row_Three();
 void scan_Row_Four();
 void scan_Keypad();
-
-//CREATE LOOKUP TABLE
-
-//DEFINE THE STRUCTURE TYPE
-typedef struct
-{
-	uint8_t month;
-	uint8_t day;
-	uint8_t positionsun;
-	uint8_t positionmoon;
-	
-} lookuptab;
-
-//SET UP LOOKUP TABLE WITH 5 SPECIAL DATES
-lookuptab lookupTable[] = {
-	{0b00000100, 0b00001010, 0b00110110, 0b01111001}, //April 10th - Dr. Clark's Birthday
-	{0b00000100, 0b00011100, 0b01000001, 0b10111101}, //April 28th - Graduation
-	{0b00000101, 0b00010001, 0b01001011, 0b00111100}, //May 17th - Karinna's Birthday
-	{0b00000110, 0b00010000, 0b01011100, 0b00101111}, //June 16th - Maddi's Birthday
-	{0b00000111, 0b00011100, 0b01100001, 0b10001110} //July 28th - Cece's Birthday
-};
-
-
+/*Main Program Loop*/
 int main(void)
 {
-// INITIALIZE THE USART WITH THE DESIRED PARAMETERS
-    
-    initialize_usart();
-    
-    //wait(500,2);
-	
-//SET UP INTERRUPTS
-	
-	DDRD = 0b00000000; // all pins are inputs, PD2 & PD3 attached to switches
-	PORTD = 0b00001100; 
-	EICRA = 0b00001010;	// Trigger INT0 and INT1 on falling edge
-	EIMSK = 1<<INT0;	// Enable INT0
-	sei(); // enable global interrupt, must include AVR/interrupt.h header
-	
 //Set Up Keypad
 	/* Set all PORTC pins as inputs with pull-ups enabled */
 	DDRC = 0b00000000;  // All pins of PORTC are inputs
-	PORTC = 0b00000111; // Enable pull-ups on PORTC
-
+	PORTC = 0b11111111; // Enable pull-ups on PORTC
 	/* Set (Row 1 - Red Wire) as an output */ //MOVED TO PB0
 	DDRB |= 0b00000001; // PB0 as output
 	PORTB |= 0b00000001; // Initially high
 	
-	/*Set PC3 (Row 2 - Orange Wire) (Row 3 - Yellow Wire) (Row 4 - Green Wire)as an output)*/
-	DDRC |= 0b00111000; //Set PC3, PC4, PC5 as output
-	PORTC |= 0b00111000; //Initially high
+	/*Set PC3 (Row 2 - Orange Wire) as an output)*/
+	DDRC |= 0b00001000; //Set PC3 as output
+	PORTC |= 0b00001000; //Initially high
 	
-// 
-	/*Set up LED*/
+	/*Set PC4 (Row 3 - Yellow Wire) as an output)*/
+	DDRC |= 0b00010000; // Set PC4 as output
+	PORTC |= 0b00010000; //Initially high
+	
+	/*Set PC5 (Row 4 - Green Wire) as an output)*/
+	DDRC |= 0b00100000; // Set PC5 as output
+	PORTC |= 0b00100000; //Initially high
+
+// 	/*Set up LED*/
+// 	DDRB = 0b00000001; // LED pin to output PB2 to output
+// 	PORTB = 0b00000001; //initially high and LED initially off
 	DDRB = 0b00100001; // LED pin to output PB2 to output
 	PORTB = 0b00100001; //initially high and LED initially off
 
 //Set up LCD
 	// initialize display in 4 bit mode
 	HD44780_Init();
-
 	HD44780_DisplayClear(); // clear display
-
 	HD44780_PositionXY(0, 0); // set starting position
 	
 	HD44780_CursorBlink (); // blink cursor
 	
-	HD44780_DrawString("Current date: "); // send string to be displayed on first line
-
-	HD44780_PositionXY(0, 1); // set starting position
-	
-	while(1){
-		PORTB |= 0b00000000; //initially high and LED initially off
-	}
-	
-	return 0;
-}
-
-
-// date interrupts
-ISR(INT0_vect)
-{
-	sei(); // enable nested interrupt
-	EIMSK = 0b00000000; // disable both interrupts
-	
-	PORTB |= 0b00100000;
-	
-	HD44780_DisplayClear(); // clear display
-	
 	HD44780_DrawString("Enter the date: "); // send string to be displayed on first line
-
 	HD44780_PositionXY(0, 1); // set starting position
 	
 	HD44780_CursorOff();
+	
+	// 	 HD44780_DrawString("_ _/_ _");
+	//
+	// 	 HD44780_PositionXY(0, 1); // set starting position
 	
 	while (1)
 	{
 		scan_Keypad();
 		
 	}
-	
-	//use vlookup to find the number of steps for the sun in binary
-	sun = vlookup_sun(month, day);
-	
-	transmit_data_usart(sun);
-	
-	wait(10,2);
-	
-	
-	//use vlookup to find the number of steps for the earth/moon in binary
-	moon = vlookup_moon(month, day);
-	
-	transmit_data_usart(moon);
-	
-	wait(10,2);
-	
-	
-	EIMSK = 0b00000010; // enable INT1
-	EIFR = 0b00000001; // clear INT0 flag
-}
-
-ISR(INT1_vect)
-{
-	EIFR = 0b00000011; // clear both flags
-}
-
+	//HD44780_DrawString(date);
+	return 0;
+} //end main
 /*Functions*/
-
-//Wireless
-void initialize_usart(void) // function to set up USART
-{
-	UCSR0B = 0b00011000; //(1<<RXEN0); (1<<TXEN0);// enable serial transmission and receiving
-	UCSR0C = 0b00000110; //(1<<UCSZ01) | (1<<UCSZ00); // Asynchronous mode, 8-bit data; no parity; 1 stop bit
-	UBRR0L = 0x67; // 9,600 baud if Fosc = 16MHz
-}
-
-void transmit_data_usart(int data) // Function to transmit a character
-{
-	while (!(UCSR0A & 0b00100000)); // (!(UCSR0A & (1<<UDRE0))); //Poll to make sure transmit buffer is ready,
-	// then send data
-	
-	//UCSR0A is a register in the ATmega328P microcontroller that contains various status flags related to USART communication
-	//UDRE0 (USART Data Register Empty)indicates whether the transmit buffer (UDR0) is ready to accept new data
-	//When UDRE0 is set, it means that the transmit buffer is empty and ready to receive new data
-	//The expression UCSR0A & 0b00100000 performs a bitwise AND operation between the value of UCSR0A and 0b00100000, which isolates the UDRE0 flag
-	//The while loop continuously checks the value of UDRE0. The loop will continue executing until the transmit buffer is empty, meaning UDRE0 is set to 1
-	//it waits for the transmit buffer to become available for sending new data
-	
-	UDR0 = data;
-	
-	//setting the USART Data Register (UDR0) equal to data is transmitting the character over USART
-}
-
-int receive_data_usart(void) // Function to receive a character
-{
-	while (!(UCSR0A & 0b10000000)); // ((! (UCSR0A & (1<<RXC0)));
-	// Wait until new data arrives
-	//This condition checks whether the RXC0 flag is not set, meaning that no new data has been received yet
-	//The ! operator is a logical NOT operator that negates the result of the expression inside the parentheses
-	//This is while loop that continues to execute as long as the condition inside the parentheses evaluates to true
-	//(as long as no new data has been received)
-	
-	return UDR0; // read the data
-}
-
-void wait(volatile int multiple, volatile char time_choice) {
-	/* This subroutine calls others to create a delay.
-		 Total delay = multiple*T, where T is in msec and is the delay created by the called function.
-	
-		Inputs: multiple = number of multiples to delay, where multiple is the number of times an actual delay loop is called.
-		Outputs: None
-	*/
-	
-	while (multiple > 0) {
-		delay_T_msec_timer0(time_choice); 
-		multiple--;
-	}
-} // end wait()
-
-void delay_T_msec_timer0(volatile char choice) {
-    //*** delay T ms **
-    /* This subroutine creates a delay of T msec using TIMER0 with prescaler on clock, where, for a 16MHz clock:
-    		for Choice = 1: T = 0.125 msec for prescaler set to 8 and count of 250 (preload counter with 5)
-    		for Choice = 2: T = 1 msec for prescaler set to 64 and count of 250 (preload counter with 5)
-    		for Choice = 3: T = 4 msec for prescaler set to 256 and count of 250 (preload counter with 5)
-    		for Choice = 4: T = 16 msec for prescaler set to 1,024 and count of 250 (preload counter with 5)
-			for Choice = Default: T = .0156 msec for no prescaler and count of 250 (preload counter with 5)
-	
-			Inputs: None
-			Outputs: None
-	*/
-	
-	TCCR0A = 0x00; // clears WGM00 and WGM01 (bits 0 and 1) to ensure Timer/Counter is in normal mode.
-	TCNT0 = 0;  // preload value for testing on count = 250
-	// preload value for alternate test on while loop: TCNT0 = 5;  // preload load TIMER0  (count must reach 255-5 = 250)
-	
-	switch ( choice ) { // choose prescaler
-		case 1:
-			TCCR0B = 0b00000010; //1<<CS01;	TCCR0B = 0x02; // Start TIMER0, Normal mode, crystal clock, prescaler = 8
-		break;
-		case 2:
-			TCCR0B =  0b00000011; //1<<CS01 | 1<<CS00;	TCCR0B = 0x03;  // Start TIMER0, Normal mode, crystal clock, prescaler = 64
-		break;
-		case 3:
-			TCCR0B = 0b00000100; //1<<CS02;	TCCR0B = 0x04; // Start TIMER0, Normal mode, crystal clock, prescaler = 256
-		break; 
-		case 4:
-			TCCR0B = 0b00000101; //1<<CS02 | 1<<CS00; TCCR0B = 0x05; // Start TIMER0, Normal mode, crystal clock, prescaler = 1024
-		break;
-		default:
-			TCCR0B = 0b00000001; //1<<CS00; TCCR0B = 0x01; Start TIMER0, Normal mode, crystal clock, no prescaler
-		break;
-	}
-	
-	while (TCNT0 < 0xFA); // exits when count = 250 (requires preload of 0 to make count = 250)
-	// alternate test on while loop: while ((TIFR0 & (0x1<<TOV0)) == 0); // wait for TOV0 to roll over:
-	// How does this while loop work?? See notes
-	
-	TCCR0B = 0x00; // Stop TIMER0
-	//TIFR0 = 0x1<<TOV0;  // Alternate while loop: Clear TOV0 (note that this is a nonintuitive bit in that it is cleared by writing a 1 to it)
-	
-} // end delay_T_msec_timer0()
-
-int vlookup_sun(uint8_t month, uint8_t day) {
-	for (size_t i = 0; i < sizeof(lookupTable) / sizeof(lookupTable[0]); i++) {
-		if (lookupTable[i].month == month && lookupTable[i].day == day) {
-			return lookupTable[i].positionsun;
-		}
-	}
-	return 0;
-}
-
-int vlookup_moon(uint8_t month, uint8_t day) {
-	for (size_t i = 0; i < sizeof(lookupTable) / sizeof(lookupTable[0]); i++) {
-		if (lookupTable[i].month == month && lookupTable[i].day == day) {
-			return lookupTable[i].positionmoon;
-		}
-	}
-	return 0;
-}
-
-
-//Keypad
-
-void software_Debounce(){
-	wait(10,2);
-}
-
-void hardware_Debounce(){
-	wait(50,2);
-}
-
 void scan_Row(char row)
 //this function scans the specified row and stores the detected number in a temp variable
 {
@@ -339,43 +113,52 @@ void scan_Row(char row)
 		break;
 	} // end switch case
 	
+	
+	
+	//_delay_ms(10); // Delay for debouncing/stabilization
+	
+	
+	
+	
 	/* Check if any button in row 1 is pressed */
 	// Check if button in column 1 (PC0) is pressed
 	if (!(PINC & 0b00000001))
 	{
-		software_Debounce(); // Software debounce
+		_delay_ms(10); // Software debounce
 		// Do something specific for button in row 1, column 1
 		PORTB = 0b00000000;
 		temp = button_Array[0];
-		software_Debounce();
+		_delay_ms(10);
+		PORTB = 0b00000010;
 		PORTB = 0b00100000;
 		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 2 (PC1) is pressed
 	else if (!(PINC & 0b00000010))
 	{
-		software_Debounce(); // Software debounce
+		_delay_ms(10); // Software debounce
 		// Do something specific for button in row 1, column 2
 		PORTB = 0b00000000;
 		temp = button_Array[1];
-		software_Debounce();
+		_delay_ms(10);
+		PORTB = 0b00000010;
 		PORTB = 0b00100000;
 		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 3 (PC2) is pressed
 	else if (!(PINC & 0b00000100))
 	{
-		software_Debounce(); // Software debounce
+		_delay_ms(10); // Software debounce
 		// Do something specific for button in row 1, column 3
 		PORTB = 0b00000000;
 		temp =button_Array[2];
-		software_Debounce();
+		_delay_ms(10);
+		PORTB = 0b00000010;
 		PORTB = 0b00100000;
 		is_Pressed = 1;// Button is pressed
 	}
-	
-} //end scan_Row
 
+} //end scan_Row
 void scan_Row_One()
 //this function scans row one to detect a key press in any column
 {
@@ -383,13 +166,11 @@ void scan_Row_One()
 	PORTB &= 0b11111110; // Set PB0 to low
 	
 	scan_Row(1);
-
 	/* Reset row 1 to high */
 	PORTB |= 0b00000001; // Set PD7 back to high
 	
-	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_One
-
 void scan_Row_Two()
 //this function scans row two to detect a key press in any column
 {
@@ -397,13 +178,11 @@ void scan_Row_Two()
 	PORTC &= 0b11110111; // Set PC3 to low
 	
 	scan_Row(2);
-
 	/* Reset row 2 to high */
 	PORTC |= 0b00001000; // Set PC3 back to high
 	
-	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_Two
-
 void scan_Row_Three()
 //this function scans row two to detect a key press in any column
 {
@@ -411,13 +190,11 @@ void scan_Row_Three()
 	PORTC &= 0b11101111; // Set PC4 to low
 	
 	scan_Row(3);
-
 	/* Reset row 3 to high */
 	PORTC |= 0b00010000; // Set PC4 back to high
 	
-	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_Three
-
 void scan_Row_Four()
 //this function scans row two to detect a key press in any column
 {
@@ -425,13 +202,11 @@ void scan_Row_Four()
 	PORTC &= 0b11011111; // Set PC5 to low
 	
 	scan_Row(4);
-
 	/* Reset row 4 to high */
 	PORTC |= 0b00100000; // Set PC5 back to high
 	
-	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
+	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_Four
-
 void scan_Keypad()
 //this function scans all rows and all columns of the keypad
 {
