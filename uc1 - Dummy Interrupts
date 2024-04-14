@@ -1,0 +1,137 @@
+/*
+ * GccApplication1.c
+ *
+ * Created: 2/6/2024 6:01:45 PM
+ * Author : mev46
+ */ 
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+//** GLOBAL VARIABLES **/
+void wait(volatile int multiple, volatile char time_choice);
+void delay_T_msec_timer0(char choice);
+
+int debounce = 50; //50 ms to debounce
+
+//Interrupt INT0 - turn on PB
+ISR(INT0_vect){
+	PORTB = PORTB & 0b11011111; // Turn on LED by clearing PB5 (which is active low),  leave other bits unchanged  (AND PORTB with a binary number that has 0 in the only bit that we want to ensure is 0)
+	
+	wait(debounce,2); // debounce the switch
+	
+	EIMSK = 1<<INT1;
+	sei();
+	
+	while ((PIND & 0b00000100)) // wait for PD2 to go low again (wait for door to close). "Read" the contents of PortD2 using bit-wise operation (AND PIND with binary 4 so that only PD2 is read).  Exit the loop when it is 0.
+	{
+		//do nothing
+	}
+	PORTB = PORTB | 0b00100000;  // Turn off LED by setting bit PB5 (which is active low), leave other bits unchanged (OR PORTb with a binary number that has 1 in the only bit that we want to ensure is 1)
+	wait(debounce,2); // debounce the switch
+	EIFR = 0b00000001;  // Clear the INT0 interrupt flag in case it was reset while in the ISR (so that it doesn't run again) but ignore the INT1 flag in case it was set while in this ISR
+}
+
+//Interrupt INT1
+ISR(INT1_vect){
+	
+	
+	PORTB = PORTB & 0b11101111; // Turn on LED by clearing PB4 (which is active low),  leave other bits unchanged  (AND PORTB with a binary number that has 0 in the only bit that we want to ensure is 0)
+	
+	wait(debounce,2); // debounce the switch
+	
+	PORTB = PORTB | 0b00010000;  // Turn off LED by setting bit PB4 (which is active low), leave other bits unchanged (OR PORTB with a binary number that has 1 in the only bit that we want to ensure is 1)
+	
+	main();
+	
+	wait(debounce,2); // debounce the switch
+	EIFR = 0b00000010;  // Clear the INT1 interrupt flag in case it was reset while in the ISR (so that it doesn't run again) but ignore the INT0 flag in case it was set while in this ISR
+	
+	
+	
+}
+	
+
+int main(void)
+{
+		
+	// array contains the states of the LEDs in on-off pattern
+	
+		DDRD = 0b00000000; // all pins are inputs, PD2 & PD3 attached to switch
+		DDRB = 0b00110000; // pins PB0 and PB1 are outputs for LEDs for PortB (switches)
+		
+		PORTB = 0b00110000; // turns off all LEDs for PortB these are outputs for switches
+		
+		// Set up Interrupts
+		EICRA = 1<<ISC01 | 1<<ISC00 | 1<<ISC11 | 1<<ISC10;	// Trigger INT0 and INT1 on falling edge
+		EIMSK = 1<<INT0;	// Enable INT1 and INT0
+		sei();	//Enable Global Interrupt
+    
+    while(1) // The main loop does nothing, because all activity is in the interrupt routines. This loop could be used to control other things.
+    {
+	   //do nothing
+	   PORTB = 0b00110000; // turns off all LEDs for PortB these are outputs for switches
+    }
+	
+	return(0);
+
+}
+
+void wait(volatile int multiple, volatile char time_choice) {
+	//*** wait ***
+	/* This subroutine calls others to create a delay.
+		 Total delay = multiple*T, where T is in msec and is the delay created by the called function.
+	
+		Inputs: multiple = number of multiples to delay, where multiple is the number of times an actual delay loop is called.
+		Outputs: None
+	*/
+	
+	while (multiple > 0) {
+		delay_T_msec_timer0(time_choice); // we are choosing case 2, which is a 1 msec delay
+		multiple--;
+	}
+} // end wait()
+
+void delay_T_msec_timer0(char choice) {
+    //*** delay T ms **
+    /* This subroutine creates a delay of T msec using TIMER0 with prescaler on clock, where, for a 16MHz clock:
+    		for Choice = 1: T = 0.125 msec for prescaler set to 8 and count of 250 (preload counter with 5)
+    		for Choice = 2: T = 1 msec for prescaler set to 64 and count of 250 (preload counter with 5)
+    		for Choice = 3: T = 4 msec for prescaler set to 256 and count of 250 (preload counter with 5)
+    		for Choice = 4: T = 16 msec for prescaler set to 1,024 and count of 250 (preload counter with 5)
+			for Choice = Default: T = .0156 msec for no prescaler and count of 250 (preload counter with 5)
+			
+			Inputs: None
+			Outputs: None
+	*/
+	
+	TCCR0A = 0x00; // clears WGM00 and WGM01 (bits 0 and 1) to ensure Timer/Counter is in normal mode.
+	TCNT0 = 0;  // preload value for testing on count = 250
+	// preload value for alternate test on while loop: TCNT0 = 5;  // preload load TIMER0  (count must reach 255-5 = 250)
+	
+	switch ( choice ) { // choose prescaler
+		case 1:
+			TCCR0B = 0b00000010; //1<<CS01;	TCCR0B = 0x02; // Start TIMER0, Normal mode, crystal clock, prescaler = 8
+		break;
+		case 2:
+			TCCR0B =  0b00000011; //1<<CS01 | 1<<CS00;	TCCR0B = 0x03;  // Start TIMER0, Normal mode, crystal clock, prescaler = 64
+		break;
+		case 3:
+			TCCR0B = 0b00000100; //1<<CS02;	TCCR0B = 0x04; // Start TIMER0, Normal mode, crystal clock, prescaler = 256
+		break; 
+		case 4:
+			TCCR0B = 0b00000101; //1<<CS02 | 1<<CS00; TCCR0B = 0x05; // Start TIMER0, Normal mode, crystal clock, prescaler = 1024
+		break;
+		default:
+			TCCR0B = 0b00000001; //1<<CS00; TCCR0B = 0x01; Start TIMER0, Normal mode, crystal clock, no prescaler
+		break;
+	}
+	
+	while (TCNT0 < 0xFA); // exits when count = 250 (requires preload of 0 to make count = 250)
+	// alternate test on while loop: while ((TIFR0 & (0x1<<TOV0)) == 0); // wait for TOV0 to roll over:
+	// How does this while loop work?? See notes
+	
+	TCCR0B = 0x00; // Stop TIMER0
+	//TIFR0 = 0x1<<TOV0;  // Alternate while loop: Clear TOV0 (note that this is a nonintuitive bit in that it is cleared by writing a 1 to it)
+	
+} // end delay_T_msec_timer0()
