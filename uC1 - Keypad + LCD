@@ -1,32 +1,46 @@
 #define F_CPU 16000000UL  // 16 MHz
-//General
+
+/*GENERAL*/
 #include <stdio.h>
 #include <avr/io.h>
 #include <util/delay.h>
-//LCD Screen
-#include "hd44780.h"
-/*Global Variables*/
+
+#include "hd44780.h" //LCD Screen
+
+/*GLOBAL VARIABLES*/
 char temp = 'h';
 int is_Pressed = 0;
 char date [6] = {'0','0', '/','0','0','\0'};
 int date_Index = 0;
-/*Headers*/
-//Keypad
+
+/*FUNCTION HEADERS*/
+void delay_T_msec_timer0(volatile char choice);
+void wait(volatile int multiple, volatile char time_choice);
+
+/*Keypad Functions*/
+void software_Debounce();
+void hardware_Debounce();
+
+void led_ON();
+void led_OFF();
+
 void scan_Row(char row);
 void scan_Row_One();
 void scan_Row_Two();
 void scan_Row_Three();
 void scan_Row_Four();
 void scan_Keypad();
+
 /*Main Program Loop*/
 int main(void)
 {
-//Set Up Keypad
+	//Set Up Keypad
 	/* Set all PORTC pins as inputs with pull-ups enabled */
 	DDRC = 0b00000000;  // All pins of PORTC are inputs
-	PORTC = 0b11111111; // Enable pull-ups on PORTC
-	/* Set (Row 1 - Red Wire) as an output */ //MOVED TO PB0
-	DDRB |= 0b00000001; // PB0 as output
+	PORTC = 0b00000111; // Enable pull-ups on PORTC
+	
+	/* Set Pb0 (Row 1 - Red Wire) as an output */ //MOVED TO PB0
+	DDRB |= 0b00000001; // Pb0 as output
 	PORTB |= 0b00000001; // Initially high
 	
 	/*Set PC3 (Row 2 - Orange Wire) as an output)*/
@@ -40,14 +54,13 @@ int main(void)
 	/*Set PC5 (Row 4 - Green Wire) as an output)*/
 	DDRC |= 0b00100000; // Set PC5 as output
 	PORTC |= 0b00100000; //Initially high
-
-// 	/*Set up LED*/
-// 	DDRB = 0b00000001; // LED pin to output PB2 to output
-// 	PORTB = 0b00000001; //initially high and LED initially off
-	DDRB = 0b00100001; // LED pin to output PB2 to output
-	PORTB = 0b00100001; //initially high and LED initially off
-
-//Set up LCD
+	
+	/*Set up LED*/
+	DDRB |= 0b00010000; // LED pin to output PB2 to output
+	PORTB |= 0b00000000; //off
+	PORTB |= 0b00010000; //initially high and LED initially off
+	
+	//Set up LCD
 	// initialize display in 4 bit mode
 	HD44780_Init();
 	HD44780_DisplayClear(); // clear display
@@ -56,10 +69,11 @@ int main(void)
 	HD44780_CursorBlink (); // blink cursor
 	
 	HD44780_DrawString("Enter the date: "); // send string to be displayed on first line
+
 	HD44780_PositionXY(0, 1); // set starting position
-	
+
 	HD44780_CursorOff();
-	
+
 	// 	 HD44780_DrawString("_ _/_ _");
 	//
 	// 	 HD44780_PositionXY(0, 1); // set starting position
@@ -72,7 +86,80 @@ int main(void)
 	//HD44780_DrawString(date);
 	return 0;
 } //end main
-/*Functions*/
+
+/*GENERAL FUNCTIONS*/
+void wait(volatile int multiple, volatile char time_choice) {
+	/* This subroutine calls others to create a delay.
+		 Total delay = multiple*T, where T is in msec and is the delay created by the called function.
+	
+		Inputs: multiple = number of multiples to delay, where multiple is the number of times an actual delay loop is called.
+		Outputs: None
+	*/
+	
+	while (multiple > 0) {
+		delay_T_msec_timer0(time_choice); 
+		multiple--;
+	}
+} // end wait()
+void delay_T_msec_timer0(volatile char choice) {
+    //*** delay T ms **
+    /* This subroutine creates a delay of T msec using TIMER0 with prescaler on clock, where, for a 16MHz clock:
+    		for Choice = 1: T = 0.125 msec for prescaler set to 8 and count of 250 (preload counter with 5)
+    		for Choice = 2: T = 1 msec for prescaler set to 64 and count of 250 (preload counter with 5)
+    		for Choice = 3: T = 4 msec for prescaler set to 256 and count of 250 (preload counter with 5)
+    		for Choice = 4: T = 16 msec for prescaler set to 1,024 and count of 250 (preload counter with 5)
+			for Choice = Default: T = .0156 msec for no prescaler and count of 250 (preload counter with 5)
+	
+			Inputs: None
+			Outputs: None
+	*/
+	
+	TCCR0A = 0x00; // clears WGM00 and WGM01 (bits 0 and 1) to ensure Timer/Counter is in normal mode.
+	TCNT0 = 0;  // preload value for testing on count = 250
+	// preload value for alternate test on while loop: TCNT0 = 5;  // preload load TIMER0  (count must reach 255-5 = 250)
+	
+	switch ( choice ) { // choose prescaler
+		case 1:
+			TCCR0B = 0b00000010; //1<<CS01;	TCCR0B = 0x02; // Start TIMER0, Normal mode, crystal clock, prescaler = 8
+		break;
+		case 2:
+			TCCR0B =  0b00000011; //1<<CS01 | 1<<CS00;	TCCR0B = 0x03;  // Start TIMER0, Normal mode, crystal clock, prescaler = 64
+		break;
+		case 3:
+			TCCR0B = 0b00000100; //1<<CS02;	TCCR0B = 0x04; // Start TIMER0, Normal mode, crystal clock, prescaler = 256
+		break; 
+		case 4:
+			TCCR0B = 0b00000101; //1<<CS02 | 1<<CS00; TCCR0B = 0x05; // Start TIMER0, Normal mode, crystal clock, prescaler = 1024
+		break;
+		default:
+			TCCR0B = 0b00000001; //1<<CS00; TCCR0B = 0x01; Start TIMER0, Normal mode, crystal clock, no prescaler
+		break;
+	}
+	
+	while (TCNT0 < 0xFA); // exits when count = 250 (requires preload of 0 to make count = 250)
+	// alternate test on while loop: while ((TIFR0 & (0x1<<TOV0)) == 0); // wait for TOV0 to roll over:
+	// How does this while loop work?? See notes
+	
+	TCCR0B = 0x00; // Stop TIMER0
+	//TIFR0 = 0x1<<TOV0;  // Alternate while loop: Clear TOV0 (note that this is a nonintuitive bit in that it is cleared by writing a 1 to it)
+	
+} // end delay_T_msec_timer0()
+
+/*Keypad Functions*/
+void software_Debounce(){
+	wait(10,2);
+}
+void hardware_Debounce(){
+	wait(50,2);
+}
+
+void led_ON(){
+	PORTB |= 0b00000000;
+}
+void led_OFF(){
+	PORTB |= 0b000100000;
+}
+
 void scan_Row(char row)
 //this function scans the specified row and stores the detected number in a temp variable
 {
@@ -124,52 +211,49 @@ void scan_Row(char row)
 	// Check if button in column 1 (PC0) is pressed
 	if (!(PINC & 0b00000001))
 	{
-		_delay_ms(10); // Software debounce
+		software_Debounce(); // Software debounce
 		// Do something specific for button in row 1, column 1
-		PORTB = 0b00000000;
+		led_ON();
 		temp = button_Array[0];
-		_delay_ms(10);
-		PORTB = 0b00000010;
-		PORTB = 0b00100000;
+		software_Debounce();
+		led_OFF;
 		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 2 (PC1) is pressed
 	else if (!(PINC & 0b00000010))
 	{
-		_delay_ms(10); // Software debounce
+		software_Debounce(); // Software debounce
 		// Do something specific for button in row 1, column 2
-		PORTB = 0b00000000;
+		led_ON();
 		temp = button_Array[1];
-		_delay_ms(10);
-		PORTB = 0b00000010;
-		PORTB = 0b00100000;
+		software_Debounce();
+		led_OFF();
 		is_Pressed = 1;// Button is pressed
 	}
 	// Check if button in column 3 (PC2) is pressed
 	else if (!(PINC & 0b00000100))
 	{
-		_delay_ms(10); // Software debounce
+		software_Debounce(); // Software debounce
 		// Do something specific for button in row 1, column 3
-		PORTB = 0b00000000;
+		led_ON();
 		temp =button_Array[2];
-		_delay_ms(10);
-		PORTB = 0b00000010;
-		PORTB = 0b00100000;
+		software_Debounce();
+		led_OFF();
 		is_Pressed = 1;// Button is pressed
 	}
-
+	
 } //end scan_Row
 void scan_Row_One()
 //this function scans row one to detect a key press in any column
 {
-	/* Drive PB0 (row 1) low */
-	PORTB &= 0b11111110; // Set PB0 to low
+	/* Drive PD7 (row 1) low */
+	PORTB &= 0b11111110; // Set PD7 to low
 	
 	scan_Row(1);
 	/* Reset row 1 to high */
 	PORTB |= 0b00000001; // Set PD7 back to high
 	
-	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
+	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_One
 void scan_Row_Two()
 //this function scans row two to detect a key press in any column
@@ -181,7 +265,7 @@ void scan_Row_Two()
 	/* Reset row 2 to high */
 	PORTC |= 0b00001000; // Set PC3 back to high
 	
-	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
+	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_Two
 void scan_Row_Three()
 //this function scans row two to detect a key press in any column
@@ -193,7 +277,7 @@ void scan_Row_Three()
 	/* Reset row 3 to high */
 	PORTC |= 0b00010000; // Set PC4 back to high
 	
-	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
+	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_Three
 void scan_Row_Four()
 //this function scans row two to detect a key press in any column
@@ -205,7 +289,7 @@ void scan_Row_Four()
 	/* Reset row 4 to high */
 	PORTC |= 0b00100000; // Set PC5 back to high
 	
-	_delay_ms(10); // Delay before the next scan to reduce bouncing/effects
+	software_Debounce(); // Delay before the next scan to reduce bouncing/effects
 }// end scan_Row_Four
 void scan_Keypad()
 //this function scans all rows and all columns of the keypad
