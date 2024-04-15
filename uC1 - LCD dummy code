@@ -1,26 +1,28 @@
 /*
  * LCD Display Code.c
  *
- * Created: 04/15/2023
- * Author : maddi
- */ 
+ * Created: 4/15/2024
+ * Author : Maddi
+ */
 
 // LCD Screen Setup:
-	
-	// 1. return home (go to curser at 0,0)
-	// 2. function set (4 bit or 8 bit mode, how many lines of LCD are u using)
-	// 3. display on/off
-	// 4. entry mode set 
-	// 5. clear display
+// 1. return home (go to cursor at 0,0)
+// 2. function set (4 bit or 8 bit mode, how many lines of LCD are u using)
+// 3. display on/off
+// 4. entry mode set
+// 5. clear display
 
-#define LCD_RS PB1
-#define LCD_RW PB2
-#define LCD_EN PB3
+#define F_CPU 16000000
+#include <util/delay.h>
+#include <avr/io.h>
+#include <stdio.h>
+//#include "hd44780.h"
 
-
+#define LCD_RS PD0 //PD0 is connected to LCD Register Select Pin (0 for Command, 1 for Data)
+#define LCD_RW PD1 //PD1 is connected to LCD Read/Write Pin (0 for Write, 1 for Read)
+#define LCD_EN PD2 //PD2 is connected to LCD Enable Pin (0 for Disabled, 1 for Enabled)
 
 void wait(volatile int multiple);
-
 void initialize_LCD();
 void setup_commands(unsigned char command);
 void go_to_x_y(unsigned char x, unsigned char y);
@@ -31,57 +33,65 @@ void write_string(char *str);
 
 int main(void)
 {
-
-	DDRD = 0XFF;
-	initialize_LCD();
-	go_to_x_y(0,0);
-	write_string("n");
-    
+    DDRD = 0XFF; //Sets PD0, PD1, PD2 bits to 0 (Command Mode/Write Mode/Disabled)
+    initialize_LCD();
+    // prompt
+    go_to_x_y(0,0);
+    write_string("How many shots? ");
+    go_to_x_y(0,1);
+    write_string("Enter 1 or 2:   ");
 }
 
 void wait(volatile int multiple)
 {
-	// creates a delay
-	while (multiple > 0) {
-		TCCR0A = 0x00; // clears WGM
-		TCNT0 = 0; //preload value for testing
-		TCCR0B = 0b00000011;
-		while (TCNT0 < 0xFA);
-		TCCR0B = 0x00; //stop timer0
+	// creates a delay equal to multiple T w/ T= 1ms
+	// have to assume 16MHz clock
+	
+	while(multiple>0)
+	{
+		TCCR0A = 0x00; // clears WGM00 and WGM01 to ensure counter in normal mode
+		TCNT0 = 0;// preload value for testing on count =250
+		TCCR0B =  0b00000011;
+		
+		while(TCNT0<250)// exits when count - 250
+		{
+			
+		}
+		
+		TCCR0B = 0x00; //stops TIMER0
 		multiple--;
 	}
-} //end wait()
-
+}// end wait
 void initialize_LCD()
 {
-//commands to define how LCD will work
+	//commands to define how LCD will work
 	
 	setup_commands(0X02); // return home
 	setup_commands(0X28); // function set (multiple things being set here)
 	setup_commands(0X0C); // display on/off
 	setup_commands(0X06); // entry mode set
 	setup_commands(0X01); // clear screen
-	wait(2000);
+	wait(15);
 }
 void setup_commands(unsigned char command)
 {
-// sending 8 bits of data to 4 bits of the LCD
+	// sending 8 bits of data to 4 bits of the LCD
 	
-		//sending the upper 4 bits of command LCD
-		PORTD = (PORTD & 0X0F) | (command & 0XF0); 
-		PORTD &= ~(1<<LCD_RS); // RS = 0
-		PORTD |= (1<<LCD_EN); // EN = 1
-		wait(2000);
-		PORTD &= ~(1<<LCD_EN); // EN = 0
-		wait(2000);
+	//sending the upper 4 bits of command LCD
+	PORTD = (PORTD & 0X0F) | (command & 0XF0);
+	PORTD &= ~(1<<LCD_RS); // RS = 0
+	PORTD |= (1<<LCD_EN); // EN = 1
+	wait(15);
+	PORTD &= ~(1<<LCD_EN); // EN = 0
+	wait(15);
 	
-		//sending the lower 4 bits of the command to the LCD
-		PORTD = (PORTD & 0X0F) | (command<<4); 
-		PORTD |= (1<<LCD_EN); // EN = 1
-		wait(2000);
-		PORTD &= ~(1<<LCD_EN); // EN = 0
-		wait(2000);
-	}
+	//sending the lower 4 bits of the command to the LCD
+	PORTD = (PORTD & 0X0F) | (command<<4);
+	PORTD |= (1<<LCD_EN); // EN = 1
+	wait(15);
+	PORTD &= ~(1<<LCD_EN); // EN = 0
+	wait(15);
+}
 void go_to_x_y(unsigned char x, unsigned char y) // y: line 0 or line 1, x:
 {
 	if(y==0)
@@ -92,7 +102,6 @@ void go_to_x_y(unsigned char x, unsigned char y) // y: line 0 or line 1, x:
 	{
 		setup_commands(0XC0 + x);
 	}
-	
 }
 void write_string(char *str)
 {
@@ -100,22 +109,21 @@ void write_string(char *str)
 	{
 		write_to_LCD(str[i]);
 	}
-}	
+}
 void write_to_LCD(unsigned char data)
 {
-		//sending the upper 4 bits of command LCD
-		PORTD = (PORTD & 0X0F) | (data & 0XF0);
-		PORTD |= (1<<LCD_RS); // RS = 0
-		PORTD |= (1<<LCD_EN); // EN = 1
-		wait(2000);
-		PORTD &= ~(1<<LCD_EN); // EN = 0
-		wait(2000);
-		
-		//sending the lower 4 bits of the command to the LCD
-		PORTD = (PORTD & 0X0F) | (data<<4);
-		PORTD |= (1<<LCD_EN); // EN = 1
-		wait(2000);
-		PORTD &= ~(1<<LCD_EN); // EN = 0
-		wait(2000);
+	//sending the upper 4 bits of command LCD
+	PORTD = (PORTD & 0X0F) | (data & 0XF0);
+	PORTD |= (1<<LCD_RS); // RS = 0
+	PORTD |= (1<<LCD_EN); // EN = 1
+	wait(15);
+	PORTD &= ~(1<<LCD_EN); // EN = 0
+	wait(15);
+	
+	//sending the lower 4 bits of the command to the LCD
+	PORTD = (PORTD & 0X0F) | (data<<4);
+	PORTD |= (1<<LCD_EN); // EN = 1
+	wait(15);
+	PORTD &= ~(1<<LCD_EN); // EN = 0
+	wait(15);
 }
-
